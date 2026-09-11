@@ -30,3 +30,6 @@ gmedit
 *.afdesign~lock~
 
 post_run_step.sh
+
+# Generated on Linux when the proprietary Apollo binary is not available.
+extensions/Apollo/Apollo.so
