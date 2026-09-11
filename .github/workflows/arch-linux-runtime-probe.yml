@@ -1,0 +1,86 @@
+name: Arch Linux runtime probe
+
+on:
+  push:
+    branches: [arch-linux]
+    paths:
+      - '.github/workflows/arch-linux-runtime-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    env:
+      RUNTIME_VERSION: 2026.100.0.1098
+      RUNTIME_FEED: https://gms.yoyogames.com/Zeus-Runtime-NuBeta.rss
+    steps:
+      - name: Environment
+        run: |
+          set -euxo pipefail
+          uname -a
+          cat /etc/os-release
+
+      - name: Fetch beta runtime feed
+        run: |
+          set -euxo pipefail
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/runtime.rss" "$RUNTIME_FEED"
+          grep -n -C 6 "$RUNTIME_VERSION" "$RUNNER_TEMP/runtime.rss" || true
+          head -40 "$RUNNER_TEMP/runtime.rss"
+
+      - name: Fetch Linux Igor bootstrapper
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/igor-bootstrap"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/igor.zip" https://gms.yoyogames.com/igor_linux-x64.zip
+          unzip -q "$RUNNER_TEMP/igor.zip" -d "$RUNNER_TEMP/igor-bootstrap"
+          find "$RUNNER_TEMP/igor-bootstrap" -maxdepth 4 -type f -printf '%M %s %p\n'
+          IGOR=$(find "$RUNNER_TEMP/igor-bootstrap" -type f \( -name Igor -o -name Igor.exe \) | head -1)
+          test -n "$IGOR"
+          chmod +x "$IGOR"
+          file "$IGOR"
+          "$IGOR" --help || true
+
+      - name: Install Linux runtime modules without licence
+        id: runtime
+        continue-on-error: true
+        run: |
+          set -euxo pipefail
+          IGOR=$(find "$RUNNER_TEMP/igor-bootstrap" -type f \( -name Igor -o -name Igor.exe \) | head -1)
+          mkdir -p "$RUNNER_TEMP/runtimes" "$RUNNER_TEMP/gm-user"
+          chmod +x "$IGOR"
+          "$IGOR" \
+            /rp="$RUNNER_TEMP/runtimes" \
+            /ru="$RUNTIME_FEED" \
+            /uf="$RUNNER_TEMP/gm-user" \
+            /m=linux,base,base-module-linux-x64 \
+            -- Runtime Install "$RUNTIME_VERSION"
+
+      - name: Inspect installed runtime
+        if: always()
+        run: |
+          set -x
+          find "$RUNNER_TEMP/runtimes" -maxdepth 6 -type f -printf '%M %s %p\n' | head -300 || true
+          du -sh "$RUNNER_TEMP/runtimes" || true
+          find "$RUNNER_TEMP/runtimes" -type f \( -iname 'Igor*' -o -iname 'GMAssetCompiler*' -o -iname 'runner*' \) -print || true
+
+      - name: Archive runtime probe
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/probe-artifact"
+          cp "$RUNNER_TEMP/runtime.rss" "$RUNNER_TEMP/probe-artifact/" || true
+          cp "$RUNNER_TEMP/igor.zip" "$RUNNER_TEMP/probe-artifact/" || true
+          if [ -d "$RUNNER_TEMP/runtimes/runtime-$RUNTIME_VERSION" ]; then
+            tar -C "$RUNNER_TEMP/runtimes" -czf "$RUNNER_TEMP/probe-artifact/runtime-$RUNTIME_VERSION.tar.gz" "runtime-$RUNTIME_VERSION"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arch-linux-runtime-probe
+          path: ${{ runner.temp }}/probe-artifact
+          compression-level: 0
+          retention-days: 1
