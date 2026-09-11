@@ -31,6 +31,9 @@ jobs:
           lfs: true
           fetch-depth: 1
 
+      - name: Validate sandbox helper syntax
+        run: bash -n ./tools/arch-linux/sandbox-build-smoke.sh
+
       - name: Install Linux build dependencies
         run: |
           set -euxo pipefail
