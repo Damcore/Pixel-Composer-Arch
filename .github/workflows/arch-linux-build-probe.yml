@@ -154,6 +154,7 @@ jobs:
           if grep -q 'ERR:{' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'ERROR!!!' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
+          if grep -q 'Could not find function "lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           test -s "$HOME/PixelComposer/Themes/default HQ/graphics/graphics.json"
           if [ "$rc" -ne 124 ]; then
             echo "Pixel Composer exited before the 45s startup smoke window completed (rc=$rc)." >&2
