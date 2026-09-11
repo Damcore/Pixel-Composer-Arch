@@ -1,0 +1,29 @@
+name: Export arch-linux source
+
+on:
+  push:
+    branches: [arch-linux]
+    paths:
+      - '.github/workflows/export-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: recursive
+      - name: Archive working tree
+        run: |
+          tar --exclude=.git -czf ../pixel-composer-arch-linux.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixel-composer-arch-linux-source
+          path: ../pixel-composer-arch-linux.tar.gz
+          compression-level: 0
+          retention-days: 1
