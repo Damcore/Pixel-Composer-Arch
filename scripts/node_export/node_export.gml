@@ -321,10 +321,15 @@ function Node_Export(_x, _y, _group = noone) : Node(_x, _y, _group) constructor 
 			break;
 		
 		case os_linux : 
-			converter = directory_search_file(string_lower(filepath_resolve(PREFERENCES.ImageMagick_path)), "imagemagick.appimage", -1);
-			magick    = directory_search_file(string_lower(filepath_resolve(PREFERENCES.ImageMagick_path)), "imagemagick.appimage", -1);
-			webp      = directory_search_file(string_lower(filepath_resolve(PREFERENCES.webp_path)),        "webpmux",              -1);
-			gifski    = directory_search_file(string_lower(filepath_resolve(PREFERENCES.gifski_path)),      "gifski",               -1);
+			var _imDir = filepath_resolve(PREFERENCES.ImageMagick_path);
+			var _imDirBundled = string_lower(_imDir);
+			if(!directory_exists(_imDir) && directory_exists(_imDirBundled)) _imDir = _imDirBundled;
+
+			converter = directory_search_file(_imDir, "ImageMagick.AppImage", -1);
+			if(!file_exists_empty(converter)) converter = directory_search_file(_imDir, "imagemagick.appimage", -1);
+			magick = converter;
+			webp   = directory_search_file(filepath_resolve(PREFERENCES.webp_path),   "webpmux", -1);
+			gifski = directory_search_file(filepath_resolve(PREFERENCES.gifski_path), "gifski",  -1);
 			
 			var _w = function(s,p) /*=>*/ {return $"No {s} detected at {p}, please make sure the installation is complete and {s} path is set correctly in the preference."};
 			
@@ -332,10 +337,9 @@ function Node_Export(_x, _y, _group = noone) : Node(_x, _y, _group) constructor 
 			if(!file_exists_empty(webp))      noti_warning(_w("webp",        webp),   noone, self);
 			if(!file_exists_empty(gifski))    noti_warning(_w("gifski",      gifski), noone, self);
 			
-			shell_execute("", $"chmod +x {converter}");
-			shell_execute("", $"chmod +x {magick}");
-			shell_execute("", $"chmod +x {webp}");
-			shell_execute("", $"chmod +x {gifski}");
+			if(file_exists_empty(converter)) shell_execute("", $"chmod +x {string_quote(converter)}");
+			if(file_exists_empty(webp))      shell_execute("", $"chmod +x {string_quote(webp)}");
+			if(file_exists_empty(gifski))    shell_execute("", $"chmod +x {string_quote(gifski)}");
 			break;
 		
 		case os_macosx : 

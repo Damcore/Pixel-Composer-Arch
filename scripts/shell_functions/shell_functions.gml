@@ -8,8 +8,8 @@ function shellOpenExplorer(path) {
 			
 		case os_linux : 
 			path = string_replace_all(path, "\\", "/");
-            var res = shell_execute_async($"xdg-open {path}");
-            break;
+			var res = shell_execute_async("xdg-open", string_quote(path));
+			break;
 			
 		case os_macosx : 
 			path = string_replace_all(path, "\\", "/");
@@ -57,7 +57,13 @@ function env_user() {
 	INLINE
 	
 	if(OS == os_windows) return string(environment_get_variable("userprofile")) + "/AppData/Local/PixelComposer/";
-	if(OS == os_macosx)  return string(environment_get_variable("HOME")) + "/PixelComposer/";
+	if(OS == os_macosx || OS == os_linux) {
+		var _home = string(environment_get_variable("HOME"));
+		if(_home == "") _home = working_directory;
+		_home = string_replace_all(_home, "\\", "/");
+		if(!string_ends_with(_home, "/")) _home += "/";
+		return _home + "PixelComposer/";
+	}
 	return "";
 }
 

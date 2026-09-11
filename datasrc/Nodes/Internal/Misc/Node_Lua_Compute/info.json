@@ -6,5 +6,9 @@
   "io":[
     "any"
   ],
-  "name":"Lua Compute"
+  "name":"Lua Compute",
+  "os":[
+    "Windows",
+    "MacOS"
+  ]
 }

@@ -6,5 +6,9 @@
   "io":[
     "any"
   ],
-  "name":"Lua Surface"
+  "name":"Lua Surface",
+  "os":[
+    "Windows",
+    "MacOS"
+  ]
 }

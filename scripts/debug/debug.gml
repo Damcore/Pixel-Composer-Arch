@@ -163,9 +163,11 @@ function setException() {
 			return 0;
 		} else show_debug_message($"ERR:{json_stringify(ex)}");
 		
-		var rep = $"{APP_LOCATION}report/PXC crash reporter.exe";
-		var pid = shell_execute(rep, DIRECTORY);
-		print($"{rep} [{file_exists(rep)}]: {pid}");
+		if(OS == os_windows) {
+			var rep = $"{APP_LOCATION}report/PXC crash reporter.exe";
+			var pid = shell_execute(rep, DIRECTORY);
+			print($"{rep} [{file_exists(rep)}]: {pid}");
+		}
 		
 		game_end(); 
 	    return 0;

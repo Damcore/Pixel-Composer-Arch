@@ -15,8 +15,14 @@
 		DIRECTORY     = working_directory;
 	    APP_LOCATION  = working_directory;
 	    
-	    var _user = string_trim(shell_execute("", "whoami"));
-		DIRECTORY = $"/home/{_user}/PixelComposer/";
+			// Let bundled AppImages run even when FUSE is unavailable.
+		environment_set_variable("APPIMAGE_EXTRACT_AND_RUN", "1");
+
+		var _home = string(environment_get_variable("HOME"));
+		if(_home == "") _home = working_directory;
+		_home = string_replace_all(_home, "\\", "/");
+		if(!string_ends_with(_home, "/")) _home += "/";
+		DIRECTORY = $"{_home}PixelComposer/";
 	    
 	    show_debug_message($"working_directory = {working_directory}");
 	    show_debug_message($"temp_directory = {temp_directory}");
@@ -170,7 +176,8 @@
 	
 	var t0   = get_timer();
 	var t    = get_timer();
-	var _lua = !IS_CMD || PROGRAM_ARGUMENTS._lua;
+	globalvar LUA_AVAILABLE; LUA_AVAILABLE = OS != os_linux;
+	var _lua = (!IS_CMD || PROGRAM_ARGUMENTS._lua) && LUA_AVAILABLE;
 	__r = getMemoryUsage(pid); 
 	
 				  __initSurfaceFormat();  printDebug($"- init SurfaceFormat | {__log_tr()}"); 

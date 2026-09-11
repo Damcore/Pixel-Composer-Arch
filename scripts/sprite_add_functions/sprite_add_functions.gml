@@ -67,8 +67,28 @@ function sprite_get_splices(path) {
 }
 
 function sprite_path_check_format(_path, noti = true) {
-	static path_convert = filepath_resolve(PREFERENCES.ImageMagick_path) + "convert.exe";
-	static path_magick  = filepath_resolve(PREFERENCES.ImageMagick_path) + "magick.exe";
+	var _imageMagickDir = filepath_resolve(PREFERENCES.ImageMagick_path);
+	var path_convert = "";
+	var path_magick  = "";
+
+	switch(OS) {
+		case os_windows:
+			path_convert = directory_search_file(_imageMagickDir, "convert.exe", -1);
+			path_magick  = directory_search_file(_imageMagickDir, "magick.exe", -1);
+			break;
+		case os_linux:
+			var _imageMagickBundledDir = string_lower(_imageMagickDir);
+			if(!directory_exists(_imageMagickDir) && directory_exists(_imageMagickBundledDir)) _imageMagickDir = _imageMagickBundledDir;
+			path_magick = directory_search_file(_imageMagickDir, "ImageMagick.AppImage", -1);
+			if(!file_exists_empty(path_magick)) path_magick = directory_search_file(_imageMagickDir, "imagemagick.appimage", -1);
+			path_convert = path_magick;
+			if(file_exists_empty(path_magick)) shell_execute("", $"chmod +x {string_quote(path_magick)}");
+			break;
+		case os_macosx:
+			path_convert = "/opt/homebrew/bin/convert";
+			path_magick  = "/opt/homebrew/bin/magick";
+			break;
+	}
 	
 	var _extx = string_lower(filename_ext(_path));
 	var _fmod = file_get_modify_s(_path);
@@ -81,18 +101,26 @@ function sprite_path_check_format(_path, noti = true) {
 			var _data = read_png_header(_path, noti);
 			if(_data == noone || _data.depth <= 8) return _path;
 			
+			if(!file_exists_empty(path_magick)) {
+				if(noti) noti_warning("ImageMagick is unavailable; loading the original image instead.");
+				return _path;
+			}
 			if(noti) noti_warning($"{_data.depth} bits image is not supported. Proxy will be used.");
 			
-			var shell_cmd = $"convert \"{_path}\" -depth 8 \"{_prox}\"";
+			var shell_cmd = $"convert {string_quote(_path)} -depth 8 {string_quote(_prox)}";
 			shell_execute(path_magick, shell_cmd, self);
-			return _prox;
+			return file_exists_empty(_prox)? _prox : _path;
 			
 		case ".bmp": 
 		case ".tga": 
 		case ".webp": 
+			if(!file_exists_empty(path_convert)) {
+				if(noti) noti_warning("ImageMagick is unavailable; loading the original image instead.");
+				return _path;
+			}
 			if(noti) noti_warning($"Used proxy for {_extx} file.");
-			shell_execute(path_convert, $"\"{_path}\" \"{_prox}\"");
-			return _prox;
+			shell_execute(path_convert, $"{string_quote(_path)} {string_quote(_prox)}", self);
+			return file_exists_empty(_prox)? _prox : _path;
 	}
 	
 	return _path;

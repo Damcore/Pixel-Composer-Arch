@@ -76,6 +76,9 @@ function __initAddon() {
 	
 	ADDONS_ON_START = [];
 	
+	// Custom add-ons require the optional Apollo/Lua implementation.
+	if(!LUA_AVAILABLE) return;
+
 	directory_verify(dirPath);
 	__addonDefault(dirPath);
 	
