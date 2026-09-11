@@ -48,32 +48,49 @@ jobs:
           PKG="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/package-tool-linux-x64/PackageTool"
           GMPM="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/gmpm-linux-x64/gmpm.dll"
           chmod +x "$PT" "$PKG"
-          "$PT" PREFABS RESTORE \
-            SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" \
-            PACKAGETOOL="$PKG" \
-            GMPM_DLL="$GMPM"
+          "$PT" PREFABS RESTORE SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" PACKAGETOOL="$PKG" GMPM_DLL="$GMPM"
+
+      - name: Build Linux Apollo compatibility shim
+        run: |
+          set -euxo pipefail
+          cat > "$RUNNER_TEMP/apollo_linux_stub.c" <<'EOF'
+          // Linux no-op bridge for the optional proprietary Apollo extension.
+          // Pixel Composer documents Lua nodes as unsupported on Linux; keeping
+          // these ABI symbols available prevents the rest of the editor from
+          // failing during extension resolution when Apollo.so is not present.
+          #include <stddef.h>
+          #define API __attribute__((visibility("default")))
+          API double lua_show_error(const char *s) { (void)s; return 0.0; }
+          API double lua_reset(void) { return 0.0; }
+          API double lua_set_cwd(const char *s) { (void)s; return 0.0; }
+          API double lua_state_create(void) { return 0.0; }
+          API double lua_state_destroy(double a) { (void)a; return 0.0; }
+          API double lua_thread_create(double a) { (void)a; return 0.0; }
+          API double lua_thread_destroy(double a) { (void)a; return 0.0; }
+          API double lua_state_exists(double a) { (void)a; return 0.0; }
+          API double lua_state_reuse_indexes(void) { return 0.0; }
+          API double lua_add_function_raw(double a, const char *b, double c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_state_get_interop_depth(double a) { (void)a; return 0.0; }
+          API double lua_state_exec_raw(const char *a) { (void)a; return 0.0; }
+          API double lua_call_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_add_code_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_add_file_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_global_get_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_global_set_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_global_type_raw(double a, const char *b) { (void)a; (void)b; return 0.0; }
+          API double lua_call_start_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
+          API double lua_call_next_raw(double a, const char *b) { (void)a; (void)b; return 0.0; }
+          API double lua_init_raw(const char *a) { (void)a; return 0.0; }
+          API double lua_update_method_gc(const char *a, double b) { (void)a; (void)b; return 0.0; }
+          API double lua_update_ref_gc(const char *a, double b) { (void)a; (void)b; return 0.0; }
+          EOF
+          cc -shared -fPIC -O2 -Wl,-soname,Apollo.so -o extensions/Apollo/Apollo.so "$RUNNER_TEMP/apollo_linux_stub.c"
+          file extensions/Apollo/Apollo.so
+          nm -D --defined-only extensions/Apollo/Apollo.so | grep ' lua_' | sort
 
       - name: Prepare source-only Linux build
         run: |
           set -euxo pipefail
-          # Apollo is optional/proprietary and its public source checkout contains
-          # no Linux binary. Exclude the native file and its GML bridge files from
-          # Linux so the VM runner cannot resolve half-present Lua functions.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('extensions/Apollo/Apollo.yy')
-          s = p.read_text()
-          replacements = {
-              '"copyToTargets":194,"filename":"Apollo.dll"': '"copyToTargets":66,"filename":"Apollo.dll"',
-              '"copyToTargets":-1,"filename":"apollo_core.gml"': '"copyToTargets":66,"filename":"apollo_core.gml"',
-              '"copyToTargets":-1,"filename":"apollo_ref.gml"': '"copyToTargets":66,"filename":"apollo_ref.gml"',
-          }
-          for old, new in replacements.items():
-              if s.count(old) != 1:
-                  raise SystemExit(f'Unexpected Apollo descriptor count for {old}: {s.count(old)}')
-              s = s.replace(old, new)
-          p.write_text(s)
-          PY
           bash ./pre_build_step.sh
           test -s datafiles/pack/collections.zip
 
@@ -85,12 +102,7 @@ jobs:
           unzip -q "$RUNNER_TEMP/igor.zip" -d "$RUNNER_TEMP/igor-bootstrap"
           IGOR="$RUNNER_TEMP/igor-bootstrap/linux/x64/Igor"
           chmod +x "$IGOR"
-          "$IGOR" \
-            /rp="$RUNNER_TEMP/runtimes" \
-            /ru="$RUNTIME_FEED" \
-            /uf="$RUNNER_TEMP/gm-user" \
-            /m=linux,base,base-module-linux-x64 \
-            -- Runtime Install "$RUNTIME_VERSION"
+          "$IGOR" /rp="$RUNNER_TEMP/runtimes" /ru="$RUNTIME_FEED" /uf="$RUNNER_TEMP/gm-user" /m=linux,base,base-module-linux-x64 -- Runtime Install "$RUNTIME_VERSION"
 
       - name: Compile Pixel Composer Linux VM
         run: |
@@ -100,16 +112,7 @@ jobs:
           PT="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/project-tool-linux-x64/ProjectTool"
           mkdir -p "$RUNNER_TEMP/gm-cache" "$RUNNER_TEMP/gm-build-temp"
           chmod +x "$IGOR" "$RUNTIME/bin/assetcompiler/linux/x64/GMAssetCompiler" "$PT"
-          "$IGOR" \
-            /uf="$RUNNER_TEMP/gm-user" \
-            /rp="$RUNTIME" \
-            /project="$GITHUB_WORKSPACE/PixelComposer.yyp" \
-            /cache="$RUNNER_TEMP/gm-cache" \
-            /temp="$RUNNER_TEMP/gm-build-temp" \
-            /pf="$GITHUB_WORKSPACE/prefabs" \
-            /pt="$PT" \
-            -j=8 \
-            -- Linux Compile 2>&1 | tee "$RUNNER_TEMP/linux-compile.log"
+          "$IGOR" /uf="$RUNNER_TEMP/gm-user" /rp="$RUNTIME" /project="$GITHUB_WORKSPACE/PixelComposer.yyp" /cache="$RUNNER_TEMP/gm-cache" /temp="$RUNNER_TEMP/gm-build-temp" /pf="$GITHUB_WORKSPACE/prefabs" /pt="$PT" -j=8 -- Linux Compile 2>&1 | tee "$RUNNER_TEMP/linux-compile.log"
 
       - name: Smoke-test with GameMaker Linux runner
         run: |
@@ -117,31 +120,21 @@ jobs:
           RUNTIME="$RUNNER_TEMP/runtimes/runtime-$RUNTIME_VERSION"
           BUILD_ZIP=$(find "$GITHUB_WORKSPACE/output" -type f -name 'PixelComposer.zip' -print -quit)
           test -n "$BUILD_ZIP"
-          rm -rf "$RUNNER_TEMP/vm-build" "$RUNNER_TEMP/gm-runner"
           mkdir -p "$RUNNER_TEMP/vm-build" "$RUNNER_TEMP/gm-runner"
           unzip -q "$BUILD_ZIP" -d "$RUNNER_TEMP/vm-build"
           unzip -q "$RUNTIME/linux/runner.zip" -d "$RUNNER_TEMP/gm-runner"
           cp "$RUNNER_TEMP/gm-runner/runner" "$RUNNER_TEMP/vm-build/runner"
           chmod +x "$RUNNER_TEMP/vm-build/runner"
-
-          set +e
           cd "$RUNNER_TEMP/vm-build"
+          set +e
           timeout 90s xvfb-run -a -s '-screen 0 1920x1080x24' ./runner >"$RUNNER_TEMP/vm-smoke.log" 2>&1
           rc=$?
           set -e
           cat "$RUNNER_TEMP/vm-smoke.log"
           echo "VM_SMOKE_EXIT=$rc"
-          if grep -q 'ERROR!!!' "$RUNNER_TEMP/vm-smoke.log"; then
-            echo 'GameMaker runtime reported an application error.' >&2
-            exit 1
-          fi
-          if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then
-            echo 'Lua bridge is still partially present in the Linux build.' >&2
-            exit 1
-          fi
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then
-            exit "$rc"
-          fi
+          if grep -q 'ERROR!!!' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
+          if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then exit "$rc"; fi
 
       - name: Inspect compile output
         if: always()
