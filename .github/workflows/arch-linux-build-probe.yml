@@ -9,6 +9,7 @@ on:
       - 'pre_run.py'
       - 'datasrc/update.py'
       - 'tools/arch-linux/**'
+      - 'options/linux/**'
       - 'objects/o_main/**'
       - 'scripts/**'
       - 'datasrc/Nodes/Internal/Misc/Node_Lua_*/**'
@@ -67,6 +68,7 @@ jobs:
           test -s extensions/Apollo/Apollo.so
           test -s extensions/Apollo/apollo_call.gml
           test -s datafiles/pack/collections.zip
+          grep -q '"option_linux_disable_sandbox":true' options/linux/options_linux.yy
 
       - name: Install GameMaker beta runtime
         run: |
@@ -139,6 +141,7 @@ jobs:
           unzip -q "$RUNTIME/linux/runner.zip" -d "$RUNNER_TEMP/gm-runner"
           cp "$RUNNER_TEMP/gm-runner/runner" "$RUNNER_TEMP/vm-build/runner"
           chmod +x "$RUNNER_TEMP/vm-build/runner"
+          rm -rf "$HOME/PixelComposer"
           cd "$RUNNER_TEMP/vm-build"
           set +e
           SDL_AUDIODRIVER=dummy timeout 45s \
@@ -148,9 +151,14 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/vm-smoke.log"
           echo "VM_SMOKE_EXIT=$rc"
+          if grep -q 'ERR:{' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'ERROR!!!' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then exit "$rc"; fi
+          test -s "$HOME/PixelComposer/Themes/default HQ/graphics/graphics.json"
+          if [ "$rc" -ne 124 ]; then
+            echo "Pixel Composer exited before the 45s startup smoke window completed (rc=$rc)." >&2
+            exit 1
+          fi
 
       - name: Inspect outputs
         if: always()
