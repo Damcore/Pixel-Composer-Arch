@@ -29,9 +29,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential ca-certificates clang curl ffmpeg fuse libglu1-mesa \
-            libopenal1 libpulse0 openssh-client python3 unzip xdg-utils zip
-          sudo mkdir -p /output
-          sudo chown "$USER:$USER" /output
+            libopenal1 libpulse0 openssh-client python3 unzip xauth xdg-utils xvfb zip
 
       - name: Install GameMaker CLI project tools
         run: |
@@ -42,7 +40,6 @@ jobs:
             @gm-tools/project-tool-linux-x64 \
             @gm-tools/package-tool-linux-x64 \
             @gm-tools/gmpm-linux-x64
-          find node_modules/@gm-tools -maxdepth 3 -type f \( -name ProjectTool -o -name PackageTool -o -name gmpm.dll \) -print
 
       - name: Restore project Prefabs
         run: |
@@ -55,14 +52,11 @@ jobs:
             SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" \
             PACKAGETOOL="$PKG" \
             GMPM_DLL="$GMPM"
-          find "$GITHUB_WORKSPACE/prefabs" -maxdepth 3 -type f -print | head -80 || true
 
       - name: Prepare source-only Linux build
         run: |
           set -euxo pipefail
-          # Apollo is an optional paid extension and its binary is intentionally
-          # absent from the public repository. Linux is already documented by
-          # upstream as unsupported for Lua nodes, so do not package Apollo.so.
+          # Apollo is optional/proprietary and upstream documents Lua as unsupported on Linux.
           python3 - <<'PY'
           from pathlib import Path
           p = Path('extensions/Apollo/Apollo.yy')
@@ -73,18 +67,8 @@ jobs:
               raise SystemExit(f'Unexpected Apollo descriptor count: {s.count(old)}')
           p.write_text(s.replace(old, new))
           PY
-
-          python3 datafiles/Shaders/shader_replace.py
-          python3 datasrc/update.py
-
-          # update.py currently omits Collections although collections.zip is
-          # declared in PixelComposer.yyp and used at runtime.
-          python3 - <<'PY'
-          import shutil
-          shutil.make_archive('datafiles/pack/collections', 'zip', 'datasrc/Collections')
-          PY
-
-          ls -lh datafiles/pack/*.zip
+          bash ./pre_build_step.sh
+          test -s datafiles/pack/collections.zip
 
       - name: Install GameMaker beta runtime
         run: |
@@ -120,21 +104,51 @@ jobs:
             -j=8 \
             -- Linux Compile 2>&1 | tee "$RUNNER_TEMP/linux-compile.log"
 
+      - name: Inspect and smoke-test compiled VM build
+        run: |
+          set -euxo pipefail
+          BUILD_ZIP=$(find "$GITHUB_WORKSPACE/output" -type f -name 'PixelComposer.zip' -print -quit)
+          test -n "$BUILD_ZIP"
+          echo "BUILD_ZIP=$BUILD_ZIP"
+          file "$BUILD_ZIP"
+          unzip -q "$BUILD_ZIP" -d "$RUNNER_TEMP/vm-build"
+          find "$RUNNER_TEMP/vm-build" -maxdepth 3 -type f -printf '%M %s %p\n' | sort -k2 -nr | head -120
+          find "$RUNNER_TEMP/vm-build" -type f -perm /111 -exec file {} \; | tee "$RUNNER_TEMP/vm-executables.log"
+
+          EXE=$(find "$RUNNER_TEMP/vm-build" -type f \( -name PixelComposer -o -name runner \) -perm /111 -print -quit)
+          if [ -z "$EXE" ]; then
+            EXE=$(find "$RUNNER_TEMP/vm-build" -type f -perm /111 -print -quit)
+          fi
+          test -n "$EXE"
+          echo "Launching under Xvfb: $EXE"
+
+          set +e
+          timeout 20s xvfb-run -a "$EXE" >"$RUNNER_TEMP/vm-smoke.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/vm-smoke.log"
+          echo "VM_SMOKE_EXIT=$rc"
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then
+            exit "$rc"
+          fi
+
       - name: Inspect compile output
         if: always()
         run: |
           set -x
-          find /output -maxdepth 3 -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -100 || true
-          du -sh /output/PixelComposer 2>/dev/null || true
+          find "$GITHUB_WORKSPACE/output" -maxdepth 4 -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -100 || true
           test -f "$RUNNER_TEMP/linux-compile.log" && tail -120 "$RUNNER_TEMP/linux-compile.log" || true
+          test -f "$RUNNER_TEMP/vm-smoke.log" && tail -160 "$RUNNER_TEMP/vm-smoke.log" || true
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pixel-composer-linux-vm-compile
           path: |
-            /output/PixelComposer
+            ${{ github.workspace }}/output/PixelComposer/PixelComposer.zip
             ${{ runner.temp }}/linux-compile.log
+            ${{ runner.temp }}/vm-smoke.log
+            ${{ runner.temp }}/vm-executables.log
           compression-level: 0
           retention-days: 1
           if-no-files-found: warn
