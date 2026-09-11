@@ -3,9 +3,12 @@ set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
-# Apollo is optional/proprietary. The public checkout has its GameMaker bridge
-# but not Apollo.so, and upstream documents Lua nodes as unsupported on Linux.
-# Build a no-op ABI shim only when a real Apollo.so was not supplied.
+# Apollo is optional/proprietary. The public checkout keeps the GameMaker
+# descriptor, but the paid native/GML implementation is not part of the repo.
+# On Linux, fill only missing bridge files with no-op fallbacks so the editor can
+# start with Lua-backed features disabled. A supplied real Apollo install wins.
+bash "$ROOT/tools/arch-linux/prepare-apollo-gml-stubs.sh" "$ROOT/extensions/Apollo"
+
 APOLLO_SO="$ROOT/extensions/Apollo/Apollo.so"
 if [[ ! -f "$APOLLO_SO" ]]; then
   if ! command -v cc >/dev/null 2>&1; then
