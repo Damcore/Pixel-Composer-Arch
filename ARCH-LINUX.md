@@ -1,95 +1,114 @@
 # Pixel Composer on Arch Linux
 
-This fork tracks upstream Pixel Composer and adds an Arch-focused build/run path.
+This fork keeps upstream Pixel Composer close to source while adding a tested Linux/Arch build path.
 
-## Current status
+## Status
 
-Upstream already contains substantial Linux support (`os_linux` branches, Linux helpers and Linux release handling). The remaining risk is distro/compositor compatibility rather than a full Windows-to-Linux port.
+The Linux VM path is now **validated end to end** with GameMaker Runtime `2026.100.0.1098` on Ubuntu 24.04:
 
-For this fork, use **GameMaker 2026.100 Beta (Release 7 / IDE 1149 / Runtime 1098) or newer in the same beta line**. The upstream README still names GameMaker 2024.11; that setup is kept only as historical upstream documentation and is not the target for this Arch branch.
+- GameMaker project loads after automatic SDF prefab restore.
+- `Linux Compile` completes with `Final Compile finished`.
+- The generated VM build starts with the official GameMaker Linux runner.
+- Pixel Composer completes initialization, unpacks its data into `$HOME/PixelComposer/`, and reaches `Entering main loop`.
+- The bundled ImageMagick AppImage works without FUSE using `APPIMAGE_EXTRACT_AND_RUN=1`.
+- 16-bit PNG -> 8-bit PNG and WebP -> PNG proxy conversions are covered by CI.
+- The startup smoke test runs for 45 seconds and fails closed on GameMaker runtime errors or unresolved Lua symbols.
 
-Recommended development layout:
+Latest green evidence: GitHub Actions run `34648573802` on commit `1a6f1db4a2aa4ce53f08c132c08fa7bfe8ca70c7`.
+
+Native **Arch + Wayland/XWayland GUI behaviour still needs a real desktop smoke test**. The Ubuntu VM/runtime result proves the GameMaker project and Linux source path, not every compositor integration.
+
+## GameMaker toolchain
+
+Validated runtime:
 
 ```text
-Arch host
-  -> Distrobox/Podman Ubuntu 24.04 build box
-       -> GameMaker 2026.100 Beta Ubuntu IDE
-       -> PixelComposer.yyp
-       -> Ubuntu VM smoke test first
-       -> AppImage package second
-  -> run resulting AppImage on Arch
+2026.100.0.1098
 ```
 
-The Ubuntu build box is intentional: GameMaker officially targets Ubuntu 24.04 for its Linux IDE/build tooling, while the produced AppImage is intended to be distro-independent.
+The CI build installs the current Linux ProjectTool/PackageTool/GMPM packages from GameMaker's registry, restores `io.gamemaker.sdfshaders-1.0.0`, downloads the beta runtime through Igor, and runs a headless Linux VM compile.
 
-## 1. Arch host
+A GameMaker login was **not required for `Linux Compile`** in the validated CI path.
 
-Install the container tools if needed:
+The official `Linux Package` operation is different: without GameMaker execution/package permission it stops with:
+
+```text
+Reason Code - 0000002A
+Permission Error : Unable to obtain permission to execute
+```
+
+Do not work around that permission check. Creating the final official distributable/AppImage remains a licensed GameMaker step.
+
+## Important Linux fixes in this branch
+
+- Added `options/linux/options_linux.yy` with `option_linux_disable_sandbox=true`, required because Pixel Composer intentionally writes/unpacks data outside GameMaker's default sandbox.
+- Uses `$HOME/PixelComposer/` instead of assuming `/home/<user>/PixelComposer/`.
+- Added a portable `pre_build_step.sh` and fixed the pre-run metadata updater.
+- Build-time data packs now include `collections.zip`.
+- Linux filesystem paths preserve case instead of forcing them to lowercase.
+- `xdg-open`, file-dialog preference paths, restart behaviour and crash-reporter handling are Linux-safe.
+- Image import proxy handling supports the bundled Linux ImageMagick AppImage for 16-bit images and WebP.
+- The Linux file-selector helper has been smoke-tested to its event loop.
+- Unsupported nodes now stop construction instead of only displaying a warning.
+
+## Apollo / Lua
+
+The public repository has the Apollo extension descriptor but not the paid/proprietary Apollo implementation.
+
+For source-only Linux builds this branch generates a small compatibility shim plus GML no-op bridges **only when real Apollo files are absent**. With that fallback:
+
+- Pixel Composer starts normally.
+- Lua initialization and custom Lua add-ons are disabled.
+- Lua nodes are marked unsupported on Linux.
+- A supplied real Apollo implementation takes precedence and is not overwritten.
+
+Do not commit proprietary Apollo binaries to this repository.
+
+## Arch host workflow
+
+Recommended host tools:
 
 ```bash
 sudo pacman -S --needed podman distrobox
 ./tools/arch-linux/create-build-container.sh
 ```
 
-Then enter the build box:
+Enter the Ubuntu 24.04 build box:
 
 ```bash
 distrobox enter pxc-gamemaker
-```
-
-## 2. Ubuntu build box
-
-From the repository checkout:
-
-```bash
 ./tools/arch-linux/setup-ubuntu-build-env.sh
 ```
 
-Install the current **GameMaker 2026.100 Beta Ubuntu** build from the official GameMaker release/download page and sign in normally.
-
-Do not disable Ubuntu 24.04 AppArmor user-namespace restrictions globally unless GameMaker actually fails because of them. The official GameMaker setup guide documents that workaround, but this fork deliberately does not automate a system-wide security relaxation.
-
-## 3. First build
-
-Open `PixelComposer.yyp` using the `Default` configuration.
-
-Start with:
-
-1. Ubuntu target
-2. VM runtime
-3. Run/compile before packaging
-
-Only after the VM build launches cleanly, create an AppImage. YYC is a later validation step; it is slower and introduces more native-toolchain variables.
-
-## 4. Arch/Wayland validation
-
-Run:
+For host diagnostics:
 
 ```bash
 ./tools/arch-linux/preflight.sh
 ```
 
-Then test the produced AppImage normally. If it fails under Wayland, also test from an X11/XWayland session before changing application code. Upstream has had Linux issues around file dialogs, dependency lookup and compositor behaviour, so the diagnostic output should be kept with any failure report.
+The Ubuntu build box is deliberate: it matches GameMaker's supported Linux build environment while the resulting Linux application is then tested on Arch.
 
-## Known upstream Linux limitations
+## Native Arch QA still required
 
-Upstream currently documents these Linux limitations:
+On a real Arch desktop, test at minimum:
 
-- native file browser support is incomplete
-- clipboard interoperability is incomplete
-- file dropping is incomplete
-- borderless window support is incomplete
-- Lua nodes are not fully supported
-- HLSL nodes are unsupported/crash-prone on Linux
+1. native Wayland launch;
+2. XWayland/X11 comparison if Wayland has issues;
+3. open/save dialogs and paths containing spaces;
+4. drag/drop if available;
+5. normal PNG import plus 16-bit PNG and WebP import;
+6. PNG export and optional FFmpeg/WebP/gifski helpers;
+7. preferences persistence across restart;
+8. application restart;
+9. project save/reopen.
 
-Recent upstream versions have fixed several Linux library/path issues, so keep this fork synced with upstream before carrying large compatibility patches.
+Known nonfatal CI warnings include unavailable Windows/macOS-only extension binaries, Steam/Tablet extension macros, missing headless audio hardware and Xvfb display limitations. They did not prevent Pixel Composer from reaching the main loop.
 
 ## Fork policy
 
-Arch-specific changes should stay small and auditable:
-
-- prefer OS guards over Windows behaviour changes
-- prefer fixing path handling over copying Windows binaries
-- prefer system/native Linux helpers or upstream Linux helpers
-- keep `main` close to upstream; develop compatibility changes on `arch-linux`
-- verify VM launch before touching rendering/YYC code
+- keep `main` close to upstream;
+- develop Linux compatibility on `arch-linux`;
+- prefer small OS-gated fixes over changing Windows behaviour;
+- preserve case-sensitive Linux paths;
+- do not add downloaded/proprietary binaries;
+- distinguish an actual Arch/Wayland failure from a GameMaker packaging/license limitation.
