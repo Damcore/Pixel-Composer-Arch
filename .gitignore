@@ -31,5 +31,10 @@ gmedit
 
 post_run_step.sh
 
-# Generated on Linux when the proprietary Apollo binary is not available.
+# Generated on Linux when the proprietary Apollo implementation is not available.
 extensions/Apollo/Apollo.so
+extensions/Apollo/apollo_buffer.gml
+extensions/Apollo/apollo_call.gml
+extensions/Apollo/apollo_script_execute.gml
+extensions/Apollo/apollo_core.gml
+extensions/Apollo/apollo_ref.gml
