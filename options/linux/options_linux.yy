@@ -18,7 +18,7 @@
   "option_linux_short_desc":"Pixel Composer",
   "option_linux_splash_screen":"${base_options_dir}/linux/splash/splash.png",
   "option_linux_start_fullscreen":false,
-  "option_linux_sync":false,
+  "option_linux_sync":true,
   "option_linux_texture_page":"8192x8192",
   "option_linux_version":"1.21.9.210",
   "resourceType":"GMLinuxOptions",
