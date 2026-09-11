@@ -15,110 +15,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
-      - name: Apply Linux runtime compatibility fixes
+      - name: Apply validated patch from previous workflow revision
         run: |
           set -euo pipefail
+          git show HEAD^:.github/workflows/arch-linux-apply-runtime-fixes.yml > /tmp/previous.yml
+          awk '
+            /python3 - <<.PY./ { found=1; next }
+            found && /^          PY$/ { exit }
+            found { sub(/^          /, ""); print }
+          ' /tmp/previous.yml > /tmp/apply-runtime-fixes.py
+          test -s /tmp/apply-runtime-fixes.py
+          python3 /tmp/apply-runtime-fixes.py
+
+          # Remove indentation from the four blank lines introduced by the patch.
           python3 - <<'PY'
           from pathlib import Path
-          import json
-
-          def replace_once(path, old, new):
-              p = Path(path)
+          replacements = {
+              'objects/o_main/Other_2.gml': [
+                  ('environment_set_variable("APPIMAGE_EXTRACT_AND_RUN", "1");\n\t\t\n\t\tvar _home',
+                   'environment_set_variable("APPIMAGE_EXTRACT_AND_RUN", "1");\n\n\t\tvar _home'),
+              ],
+              'scripts/__initAddon/__initAddon.gml': [
+                  ('if(!LUA_AVAILABLE) return;\n\t\n\tdirectory_verify',
+                   'if(!LUA_AVAILABLE) return;\n\n\tdirectory_verify'),
+              ],
+              'scripts/node_export/node_export.gml': [
+                  ('if(!directory_exists(_imDir) && directory_exists(_imDirBundled)) _imDir = _imDirBundled;\n\t\t\t\n\t\t\tconverter',
+                   'if(!directory_exists(_imDir) && directory_exists(_imDirBundled)) _imDir = _imDirBundled;\n\n\t\t\tconverter'),
+              ],
+              'scripts/sprite_add_functions/sprite_add_functions.gml': [
+                  ('var path_magick  = "";\n\t\n\tswitch(OS)',
+                   'var path_magick  = "";\n\n\tswitch(OS)'),
+              ],
+          }
+          for filename, pairs in replacements.items():
+              p = Path(filename)
               s = p.read_text()
-              count = s.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected exactly one marker, found {count}: {old[:100]!r}")
-              p.write_text(s.replace(old, new, 1))
-
-          # Linux user data path + AppImage fallback + Lua capability gate.
-          replace_once(
-              'objects/o_main/Other_2.gml',
-              '    var _user = string_trim(shell_execute("", "whoami"));\n\t\tDIRECTORY = $"/home/{_user}/PixelComposer/";',
-              '\t\t// Let bundled AppImages run even when FUSE is unavailable.\n\t\tenvironment_set_variable("APPIMAGE_EXTRACT_AND_RUN", "1");\n\t\t\n\t\tvar _home = string(environment_get_variable("HOME"));\n\t\tif(_home == "") _home = working_directory;\n\t\t_home = string_replace_all(_home, "\\\\", "/");\n\t\tif(!string_ends_with(_home, "/")) _home += "/";\n\t\tDIRECTORY = $"{_home}PixelComposer/";'
-          )
-          replace_once(
-              'objects/o_main/Other_2.gml',
-              '\tvar _lua = !IS_CMD || PROGRAM_ARGUMENTS._lua;',
-              '\tglobalvar LUA_AVAILABLE; LUA_AVAILABLE = OS != os_linux;\n\tvar _lua = (!IS_CMD || PROGRAM_ARGUMENTS._lua) && LUA_AVAILABLE;'
-          )
-
-          # Keep built-in add-ons, but do not load Lua-backed custom add-ons on Linux fallback builds.
-          replace_once(
-              'scripts/__initAddon/__initAddon.gml',
-              '\tADDONS_ON_START = [];\n\t\n\tdirectory_verify(dirPath);',
-              '\tADDONS_ON_START = [];\n\t\n\t// Custom add-ons require the optional Apollo/Lua implementation.\n\tif(!LUA_AVAILABLE) return;\n\t\n\tdirectory_verify(dirPath);'
-          )
-
-          # Existing OS support check warned but still instantiated the node.
-          replace_once(
-              'scripts/node_registry/node_registry.gml',
-              '\tstatic build = function(_x = 0, _y = 0, _group = PANEL_GRAPH.getCurrentContext(), _param = {}, _skip_context = false) {\n\t\tif(!is_supported_os)\n\t\t\tnoti_warning($"{name} node not supported on the current operating system.");',
-              '\tstatic build = function(_x = 0, _y = 0, _group = PANEL_GRAPH.getCurrentContext(), _param = {}, _skip_context = false) {\n\t\tif(!is_supported_os) {\n\t\t\tnoti_warning($"{name} node not supported on the current operating system.");\n\t\t\treturn noone;\n\t\t}'
-          )
-
-          for path in [
-              'datasrc/Nodes/Internal/Misc/Node_Lua_Compute/info.json',
-              'datasrc/Nodes/Internal/Misc/Node_Lua_Global/info.json',
-              'datasrc/Nodes/Internal/Misc/Node_Lua_Surface/info.json',
-          ]:
-              p = Path(path)
-              data = json.loads(p.read_text())
-              if 'os' in data:
-                  raise SystemExit(f'{path}: os field already exists')
-              data['os'] = ['Windows', 'MacOS']
-              # Keep the repository's compact two-space JSON style.
-              p.write_text(json.dumps(data, indent=2, separators=(',', ':')) + '\n')
-
-          # Correct process invocation and Linux home directory helper.
-          replace_once(
-              'scripts/shell_functions/shell_functions.gml',
-              '\t\tcase os_linux : \n\t\t\tpath = string_replace_all(path, "\\\\", "/");\n            var res = shell_execute_async($"xdg-open {path}");\n            break;',
-              '\t\tcase os_linux : \n\t\t\tpath = string_replace_all(path, "\\\\", "/");\n\t\t\tvar res = shell_execute_async("xdg-open", string_quote(path));\n\t\t\tbreak;'
-          )
-          replace_once(
-              'scripts/shell_functions/shell_functions.gml',
-              '\tif(OS == os_windows) return string(environment_get_variable("userprofile")) + "/AppData/Local/PixelComposer/";\n\tif(OS == os_macosx)  return string(environment_get_variable("HOME")) + "/PixelComposer/";\n\treturn "";',
-              '\tif(OS == os_windows) return string(environment_get_variable("userprofile")) + "/AppData/Local/PixelComposer/";\n\tif(OS == os_macosx || OS == os_linux) {\n\t\tvar _home = string(environment_get_variable("HOME"));\n\t\tif(_home == "") _home = working_directory;\n\t\t_home = string_replace_all(_home, "\\\\", "/");\n\t\tif(!string_ends_with(_home, "/")) _home += "/";\n\t\treturn _home + "PixelComposer/";\n\t}\n\treturn "";'
-          )
-
-          # Preserve case for custom Linux paths.
-          replace_once(
-              'scripts/preferences/preferences.gml',
-              'case os_linux   : _ldir  = string_lower(filepath_resolve(PREFERENCES.ffmpeg_path));',
-              'case os_linux   : _ldir  = filepath_resolve(PREFERENCES.ffmpeg_path);'
-          )
-
-          replace_once(
-              'scripts/node_export/node_export.gml',
-              '''\t\tcase os_linux : \n\t\t\tconverter = directory_search_file(string_lower(filepath_resolve(PREFERENCES.ImageMagick_path)), "imagemagick.appimage", -1);\n\t\t\tmagick    = directory_search_file(string_lower(filepath_resolve(PREFERENCES.ImageMagick_path)), "imagemagick.appimage", -1);\n\t\t\twebp      = directory_search_file(string_lower(filepath_resolve(PREFERENCES.webp_path)),        "webpmux",              -1);\n\t\t\tgifski    = directory_search_file(string_lower(filepath_resolve(PREFERENCES.gifski_path)),      "gifski",               -1);\n\t\t\t\n\t\t\tvar _w = function(s,p) /*=>*/ {return $"No {s} detected at {p}, please make sure the installation is complete and {s} path is set correctly in the preference."};\n\t\t\t\n\t\t\tif(!file_exists_empty(converter)) noti_warning(_w("ImageMagick", magick), noone, self);\n\t\t\tif(!file_exists_empty(webp))      noti_warning(_w("webp",        webp),   noone, self);\n\t\t\tif(!file_exists_empty(gifski))    noti_warning(_w("gifski",      gifski), noone, self);\n\t\t\t\n\t\t\tshell_execute("", $"chmod +x {converter}");\n\t\t\tshell_execute("", $"chmod +x {magick}");\n\t\t\tshell_execute("", $"chmod +x {webp}");\n\t\t\tshell_execute("", $"chmod +x {gifski}");\n\t\t\tbreak;''',
-              '''\t\tcase os_linux : \n\t\t\tvar _imDir = filepath_resolve(PREFERENCES.ImageMagick_path);\n\t\t\tvar _imDirBundled = string_lower(_imDir);\n\t\t\tif(!directory_exists(_imDir) && directory_exists(_imDirBundled)) _imDir = _imDirBundled;\n\t\t\t\n\t\t\tconverter = directory_search_file(_imDir, "ImageMagick.AppImage", -1);\n\t\t\tif(!file_exists_empty(converter)) converter = directory_search_file(_imDir, "imagemagick.appimage", -1);\n\t\t\tmagick = converter;\n\t\t\twebp   = directory_search_file(filepath_resolve(PREFERENCES.webp_path),   "webpmux", -1);\n\t\t\tgifski = directory_search_file(filepath_resolve(PREFERENCES.gifski_path), "gifski",  -1);\n\t\t\t\n\t\t\tvar _w = function(s,p) /*=>*/ {return $"No {s} detected at {p}, please make sure the installation is complete and {s} path is set correctly in the preference."};\n\t\t\t\n\t\t\tif(!file_exists_empty(converter)) noti_warning(_w("ImageMagick", magick), noone, self);\n\t\t\tif(!file_exists_empty(webp))      noti_warning(_w("webp",        webp),   noone, self);\n\t\t\tif(!file_exists_empty(gifski))    noti_warning(_w("gifski",      gifski), noone, self);\n\t\t\t\n\t\t\tif(file_exists_empty(converter)) shell_execute("", $"chmod +x {string_quote(converter)}");\n\t\t\tif(file_exists_empty(webp))      shell_execute("", $"chmod +x {string_quote(webp)}");\n\t\t\tif(file_exists_empty(gifski))    shell_execute("", $"chmod +x {string_quote(gifski)}");\n\t\t\tbreak;'''
-          )
-
-          # Cross-platform proxy conversion for 16-bit PNG/BMP/TGA/WebP imports.
-          replace_once(
-              'scripts/sprite_add_functions/sprite_add_functions.gml',
-              '''function sprite_path_check_format(_path, noti = true) {\n\tstatic path_convert = filepath_resolve(PREFERENCES.ImageMagick_path) + "convert.exe";\n\tstatic path_magick  = filepath_resolve(PREFERENCES.ImageMagick_path) + "magick.exe";\n\t\n\tvar _extx = string_lower(filename_ext(_path));''',
-              '''function sprite_path_check_format(_path, noti = true) {\n\tvar _imageMagickDir = filepath_resolve(PREFERENCES.ImageMagick_path);\n\tvar path_convert = "";\n\tvar path_magick  = "";\n\t\n\tswitch(OS) {\n\t\tcase os_windows:\n\t\t\tpath_convert = directory_search_file(_imageMagickDir, "convert.exe", -1);\n\t\t\tpath_magick  = directory_search_file(_imageMagickDir, "magick.exe", -1);\n\t\t\tbreak;\n\t\tcase os_linux:\n\t\t\tvar _imageMagickBundledDir = string_lower(_imageMagickDir);\n\t\t\tif(!directory_exists(_imageMagickDir) && directory_exists(_imageMagickBundledDir)) _imageMagickDir = _imageMagickBundledDir;\n\t\t\tpath_magick = directory_search_file(_imageMagickDir, "ImageMagick.AppImage", -1);\n\t\t\tif(!file_exists_empty(path_magick)) path_magick = directory_search_file(_imageMagickDir, "imagemagick.appimage", -1);\n\t\t\tpath_convert = path_magick;\n\t\t\tif(file_exists_empty(path_magick)) shell_execute("", $"chmod +x {string_quote(path_magick)}");\n\t\t\tbreak;\n\t\tcase os_macosx:\n\t\t\tpath_convert = "/opt/homebrew/bin/convert";\n\t\t\tpath_magick  = "/opt/homebrew/bin/magick";\n\t\t\tbreak;\n\t}\n\t\n\tvar _extx = string_lower(filename_ext(_path));'''
-          )
-          replace_once(
-              'scripts/sprite_add_functions/sprite_add_functions.gml',
-              '''\t\t\tif(noti) noti_warning($"{_data.depth} bits image is not supported. Proxy will be used.");\n\t\t\t\n\t\t\tvar shell_cmd = $"convert \\\"{_path}\\\" -depth 8 \\\"{_prox}\\\"";\n\t\t\tshell_execute(path_magick, shell_cmd, self);\n\t\t\treturn _prox;''',
-              '''\t\t\tif(!file_exists_empty(path_magick)) {\n\t\t\t\tif(noti) noti_warning("ImageMagick is unavailable; loading the original image instead.");\n\t\t\t\treturn _path;\n\t\t\t}\n\t\t\tif(noti) noti_warning($"{_data.depth} bits image is not supported. Proxy will be used.");\n\t\t\t\n\t\t\tvar shell_cmd = $"convert {string_quote(_path)} -depth 8 {string_quote(_prox)}";\n\t\t\tshell_execute(path_magick, shell_cmd, self);\n\t\t\treturn file_exists_empty(_prox)? _prox : _path;'''
-          )
-          replace_once(
-              'scripts/sprite_add_functions/sprite_add_functions.gml',
-              '''\t\tcase ".webp": \n\t\t\tif(noti) noti_warning($"Used proxy for {_extx} file.");\n\t\t\tshell_execute(path_convert, $"\\\"{_path}\\\" \\\"{_prox}\\\"");\n\t\t\treturn _prox;''',
-              '''\t\tcase ".webp": \n\t\t\tif(!file_exists_empty(path_convert)) {\n\t\t\t\tif(noti) noti_warning("ImageMagick is unavailable; loading the original image instead.");\n\t\t\t\treturn _path;\n\t\t\t}\n\t\t\tif(noti) noti_warning($"Used proxy for {_extx} file.");\n\t\t\tshell_execute(path_convert, $"{string_quote(_path)} {string_quote(_prox)}", self);\n\t\t\treturn file_exists_empty(_prox)? _prox : _path;'''
-          )
-
-          # Linux cannot execute the bundled Windows crash reporter.
-          replace_once(
-              'scripts/debug/debug.gml',
-              '''\t\tvar rep = $"{APP_LOCATION}report/PXC crash reporter.exe";\n\t\tvar pid = shell_execute(rep, DIRECTORY);\n\t\tprint($"{rep} [{file_exists(rep)}]: {pid}");''',
-              '''\t\tif(OS == os_windows) {\n\t\t\tvar rep = $"{APP_LOCATION}report/PXC crash reporter.exe";\n\t\t\tvar pid = shell_execute(rep, DIRECTORY);\n\t\t\tprint($"{rep} [{file_exists(rep)}]: {pid}");\n\t\t}'''
-          )
+              for old, new in pairs:
+                  if old not in s:
+                      raise SystemExit(f'{filename}: whitespace cleanup marker missing')
+                  s = s.replace(old, new, 1)
+              p.write_text(s)
           PY
 
           git diff --check
