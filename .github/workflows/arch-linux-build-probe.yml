@@ -5,6 +5,13 @@ on:
     branches: [arch-linux]
     paths:
       - '.github/workflows/arch-linux-build-probe.yml'
+      - 'pre_build_step.sh'
+      - 'pre_run.py'
+      - 'datasrc/update.py'
+      - 'tools/arch-linux/**'
+      - 'objects/o_main/**'
+      - 'scripts/**'
+      - 'datasrc/Nodes/Internal/Misc/Node_Lua_*/**'
   workflow_dispatch:
 
 permissions:
@@ -48,61 +55,34 @@ jobs:
           PKG="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/package-tool-linux-x64/PackageTool"
           GMPM="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/gmpm-linux-x64/gmpm.dll"
           chmod +x "$PT" "$PKG"
-          "$PT" PREFABS RESTORE SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" PACKAGETOOL="$PKG" GMPM_DLL="$GMPM"
-
-      - name: Build Linux Apollo compatibility shim
-        run: |
-          set -euxo pipefail
-          cat > "$RUNNER_TEMP/apollo_linux_stub.c" <<'EOF'
-          // Linux no-op bridge for the optional proprietary Apollo extension.
-          // Pixel Composer documents Lua nodes as unsupported on Linux; keeping
-          // these ABI symbols available prevents the rest of the editor from
-          // failing during extension resolution when Apollo.so is not present.
-          #include <stddef.h>
-          #define API __attribute__((visibility("default")))
-          API double lua_show_error(const char *s) { (void)s; return 0.0; }
-          API double lua_reset(void) { return 0.0; }
-          API double lua_set_cwd(const char *s) { (void)s; return 0.0; }
-          API double lua_state_create(void) { return 0.0; }
-          API double lua_state_destroy(double a) { (void)a; return 0.0; }
-          API double lua_thread_create(double a) { (void)a; return 0.0; }
-          API double lua_thread_destroy(double a) { (void)a; return 0.0; }
-          API double lua_state_exists(double a) { (void)a; return 0.0; }
-          API double lua_state_reuse_indexes(void) { return 0.0; }
-          API double lua_add_function_raw(double a, const char *b, double c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_state_get_interop_depth(double a) { (void)a; return 0.0; }
-          API double lua_state_exec_raw(const char *a) { (void)a; return 0.0; }
-          API double lua_call_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_add_code_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_add_file_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_global_get_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_global_set_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_global_type_raw(double a, const char *b) { (void)a; (void)b; return 0.0; }
-          API double lua_call_start_raw(double a, const char *b, const char *c) { (void)a; (void)b; (void)c; return 0.0; }
-          API double lua_call_next_raw(double a, const char *b) { (void)a; (void)b; return 0.0; }
-          API double lua_init_raw(const char *a) { (void)a; return 0.0; }
-          API double lua_update_method_gc(const char *a, double b) { (void)a; (void)b; return 0.0; }
-          API double lua_update_ref_gc(const char *a, double b) { (void)a; (void)b; return 0.0; }
-          EOF
-          cc -shared -fPIC -O2 -Wl,-soname,Apollo.so -o extensions/Apollo/Apollo.so "$RUNNER_TEMP/apollo_linux_stub.c"
-          file extensions/Apollo/Apollo.so
-          nm -D --defined-only extensions/Apollo/Apollo.so | grep ' lua_' | sort
+          "$PT" PREFABS RESTORE \
+            SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" \
+            PACKAGETOOL="$PKG" \
+            GMPM_DLL="$GMPM"
 
       - name: Prepare source-only Linux build
         run: |
           set -euxo pipefail
           bash ./pre_build_step.sh
+          test -s extensions/Apollo/Apollo.so
+          test -s extensions/Apollo/apollo_call.gml
           test -s datafiles/pack/collections.zip
 
       - name: Install GameMaker beta runtime
         run: |
           set -euxo pipefail
           mkdir -p "$RUNNER_TEMP/igor-bootstrap" "$RUNNER_TEMP/runtimes" "$RUNNER_TEMP/gm-user"
-          curl --fail --location --retry 3 --output "$RUNNER_TEMP/igor.zip" https://gms.yoyogames.com/igor_linux-x64.zip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/igor.zip" \
+            https://gms.yoyogames.com/igor_linux-x64.zip
           unzip -q "$RUNNER_TEMP/igor.zip" -d "$RUNNER_TEMP/igor-bootstrap"
           IGOR="$RUNNER_TEMP/igor-bootstrap/linux/x64/Igor"
           chmod +x "$IGOR"
-          "$IGOR" /rp="$RUNNER_TEMP/runtimes" /ru="$RUNTIME_FEED" /uf="$RUNNER_TEMP/gm-user" /m=linux,base,base-module-linux-x64 -- Runtime Install "$RUNTIME_VERSION"
+          "$IGOR" \
+            /rp="$RUNNER_TEMP/runtimes" \
+            /ru="$RUNTIME_FEED" \
+            /uf="$RUNNER_TEMP/gm-user" \
+            /m=linux,base,base-module-linux-x64 \
+            -- Runtime Install "$RUNTIME_VERSION"
 
       - name: Compile Pixel Composer Linux VM
         run: |
@@ -112,22 +92,58 @@ jobs:
           PT="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/project-tool-linux-x64/ProjectTool"
           mkdir -p "$RUNNER_TEMP/gm-cache" "$RUNNER_TEMP/gm-build-temp"
           chmod +x "$IGOR" "$RUNTIME/bin/assetcompiler/linux/x64/GMAssetCompiler" "$PT"
-          "$IGOR" /uf="$RUNNER_TEMP/gm-user" /rp="$RUNTIME" /project="$GITHUB_WORKSPACE/PixelComposer.yyp" /cache="$RUNNER_TEMP/gm-cache" /temp="$RUNNER_TEMP/gm-build-temp" /pf="$GITHUB_WORKSPACE/prefabs" /pt="$PT" -j=8 -- Linux Compile 2>&1 | tee "$RUNNER_TEMP/linux-compile.log"
+          "$IGOR" \
+            /uf="$RUNNER_TEMP/gm-user" \
+            /rp="$RUNTIME" \
+            /project="$GITHUB_WORKSPACE/PixelComposer.yyp" \
+            /cache="$RUNNER_TEMP/gm-cache" \
+            /temp="$RUNNER_TEMP/gm-build-temp" \
+            /pf="$GITHUB_WORKSPACE/prefabs" \
+            /pt="$PT" \
+            -j=8 \
+            -- Linux Compile 2>&1 | tee "$RUNNER_TEMP/linux-compile.log"
+          grep -q 'Final Compile finished' "$RUNNER_TEMP/linux-compile.log"
 
-      - name: Smoke-test with GameMaker Linux runner
+      - name: Extract compiled VM build
+        run: |
+          set -euxo pipefail
+          BUILD_ZIP=$(find "$GITHUB_WORKSPACE/output" -type f -name 'PixelComposer.zip' -print -quit)
+          test -n "$BUILD_ZIP"
+          mkdir -p "$RUNNER_TEMP/vm-build"
+          unzip -q "$BUILD_ZIP" -d "$RUNNER_TEMP/vm-build"
+          test -s "$RUNNER_TEMP/vm-build/game.unx"
+
+      - name: Smoke-test bundled ImageMagick import proxy
+        run: |
+          set -euxo pipefail
+          IM=$(find "$RUNNER_TEMP/vm-build" -type f -iname 'imagemagick.appimage' -print -quit)
+          test -n "$IM"
+          chmod +x "$IM"
+          mkdir -p "$RUNNER_TEMP/image-proxy-test"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$IM" \
+            -size 8x8 gradient: -depth 16 "$RUNNER_TEMP/image-proxy-test/in16.png"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$IM" \
+            "$RUNNER_TEMP/image-proxy-test/in16.png" -depth 8 "$RUNNER_TEMP/image-proxy-test/out8.png"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$IM" \
+            "$RUNNER_TEMP/image-proxy-test/out8.png" "$RUNNER_TEMP/image-proxy-test/in.webp"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$IM" \
+            "$RUNNER_TEMP/image-proxy-test/in.webp" "$RUNNER_TEMP/image-proxy-test/webp-proxy.png"
+          test -s "$RUNNER_TEMP/image-proxy-test/out8.png"
+          test -s "$RUNNER_TEMP/image-proxy-test/webp-proxy.png"
+
+      - name: Smoke-test Pixel Composer with GameMaker Linux runner
         run: |
           set -euxo pipefail
           RUNTIME="$RUNNER_TEMP/runtimes/runtime-$RUNTIME_VERSION"
-          BUILD_ZIP=$(find "$GITHUB_WORKSPACE/output" -type f -name 'PixelComposer.zip' -print -quit)
-          test -n "$BUILD_ZIP"
-          mkdir -p "$RUNNER_TEMP/vm-build" "$RUNNER_TEMP/gm-runner"
-          unzip -q "$BUILD_ZIP" -d "$RUNNER_TEMP/vm-build"
+          mkdir -p "$RUNNER_TEMP/gm-runner"
           unzip -q "$RUNTIME/linux/runner.zip" -d "$RUNNER_TEMP/gm-runner"
           cp "$RUNNER_TEMP/gm-runner/runner" "$RUNNER_TEMP/vm-build/runner"
           chmod +x "$RUNNER_TEMP/vm-build/runner"
           cd "$RUNNER_TEMP/vm-build"
           set +e
-          timeout 90s xvfb-run -a -s '-screen 0 1920x1080x24' ./runner >"$RUNNER_TEMP/vm-smoke.log" 2>&1
+          SDL_AUDIODRIVER=dummy timeout 45s \
+            xvfb-run -a -s '-screen 0 1920x1080x24' ./runner \
+            >"$RUNNER_TEMP/vm-smoke.log" 2>&1
           rc=$?
           set -e
           cat "$RUNNER_TEMP/vm-smoke.log"
@@ -136,13 +152,13 @@ jobs:
           if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then exit "$rc"; fi
 
-      - name: Inspect compile output
+      - name: Inspect outputs
         if: always()
         run: |
           set -x
           find "$GITHUB_WORKSPACE/output" -maxdepth 4 -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -100 || true
           test -f "$RUNNER_TEMP/linux-compile.log" && tail -120 "$RUNNER_TEMP/linux-compile.log" || true
-          test -f "$RUNNER_TEMP/vm-smoke.log" && tail -180 "$RUNNER_TEMP/vm-smoke.log" || true
+          test -f "$RUNNER_TEMP/vm-smoke.log" && tail -220 "$RUNNER_TEMP/vm-smoke.log" || true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -152,6 +168,7 @@ jobs:
             ${{ github.workspace }}/output/PixelComposer/PixelComposer.zip
             ${{ runner.temp }}/linux-compile.log
             ${{ runner.temp }}/vm-smoke.log
+            ${{ runner.temp }}/image-proxy-test
           compression-level: 0
           retention-days: 1
           if-no-files-found: warn
