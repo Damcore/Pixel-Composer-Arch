@@ -1,0 +1,108 @@
+name: Arch Linux package probe
+
+on:
+  push:
+    branches: [arch-linux]
+    paths:
+      - '.github/workflows/arch-linux-package-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-linux-vm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      RUNTIME_VERSION: 2026.100.0.1098
+      RUNTIME_FEED: https://gms.yoyogames.com/Zeus-Runtime-NuBeta.rss
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: Install Linux build dependencies
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential ca-certificates clang curl ffmpeg fuse libglu1-mesa libopenal1 libpulse0 openssh-client python3 unzip xdg-utils zip
+
+      - name: Install GameMaker project tools and restore Prefabs
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/gmtools"
+          cd "$RUNNER_TEMP/gmtools"
+          npm install --registry=https://gmpm.gamemaker.io @gm-tools/project-tool-linux-x64 @gm-tools/package-tool-linux-x64 @gm-tools/gmpm-linux-x64
+          PT="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/project-tool-linux-x64/ProjectTool"
+          PKG="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/package-tool-linux-x64/PackageTool"
+          GMPM="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/gmpm-linux-x64/gmpm.dll"
+          chmod +x "$PT" "$PKG"
+          "$PT" PREFABS RESTORE SOURCE="$GITHUB_WORKSPACE/PixelComposer.yyp" PACKAGETOOL="$PKG" GMPM_DLL="$GMPM"
+
+      - name: Prepare source-only Linux build
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('extensions/Apollo/Apollo.yy')
+          s = p.read_text()
+          old = '"copyToTargets":194,"filename":"Apollo.dll"'
+          new = '"copyToTargets":66,"filename":"Apollo.dll"'
+          if s.count(old) != 1:
+              raise SystemExit(f'Unexpected Apollo descriptor count: {s.count(old)}')
+          p.write_text(s.replace(old, new))
+          PY
+          bash ./pre_build_step.sh
+          test -s datafiles/pack/collections.zip
+
+      - name: Install GameMaker beta runtime
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/igor-bootstrap" "$RUNNER_TEMP/runtimes" "$RUNNER_TEMP/gm-user"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/igor.zip" https://gms.yoyogames.com/igor_linux-x64.zip
+          unzip -q "$RUNNER_TEMP/igor.zip" -d "$RUNNER_TEMP/igor-bootstrap"
+          IGOR="$RUNNER_TEMP/igor-bootstrap/linux/x64/Igor"
+          chmod +x "$IGOR"
+          "$IGOR" /rp="$RUNNER_TEMP/runtimes" /ru="$RUNTIME_FEED" /uf="$RUNNER_TEMP/gm-user" /m=linux,base,base-module-linux-x64 -- Runtime Install "$RUNTIME_VERSION"
+
+      - name: Package Pixel Composer Linux VM
+        run: |
+          set -euxo pipefail
+          RUNTIME="$RUNNER_TEMP/runtimes/runtime-$RUNTIME_VERSION"
+          IGOR="$RUNTIME/bin/igor/linux/x64/Igor"
+          PT="$RUNNER_TEMP/gmtools/node_modules/@gm-tools/project-tool-linux-x64/ProjectTool"
+          mkdir -p "$RUNNER_TEMP/gm-cache" "$RUNNER_TEMP/gm-build-temp" "$RUNNER_TEMP/package"
+          chmod +x "$IGOR" "$RUNTIME/bin/assetcompiler/linux/x64/GMAssetCompiler" "$PT"
+          "$IGOR" \
+            /uf="$RUNNER_TEMP/gm-user" \
+            /rp="$RUNTIME" \
+            /project="$GITHUB_WORKSPACE/PixelComposer.yyp" \
+            /cache="$RUNNER_TEMP/gm-cache" \
+            /temp="$RUNNER_TEMP/gm-build-temp" \
+            /pf="$GITHUB_WORKSPACE/prefabs" \
+            /pt="$PT" \
+            /of="$RUNNER_TEMP/package/PixelComposer" \
+            /tf="$RUNNER_TEMP/package/PixelComposer.AppImage" \
+            -j=8 \
+            -- Linux Package 2>&1 | tee "$RUNNER_TEMP/linux-package.log"
+
+      - name: Inspect package
+        if: always()
+        run: |
+          set -x
+          find "$RUNNER_TEMP/package" -maxdepth 4 -type f -printf '%M %s %p\n' 2>/dev/null | sort -k2 -nr || true
+          file "$RUNNER_TEMP/package/PixelComposer.AppImage" 2>/dev/null || true
+          test -f "$RUNNER_TEMP/linux-package.log" && tail -160 "$RUNNER_TEMP/linux-package.log" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pixel-composer-linux-package
+          path: |
+            ${{ runner.temp }}/package
+            ${{ runner.temp }}/linux-package.log
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: warn
