@@ -31,6 +31,10 @@ gmedit
 
 post_run_step.sh
 
+# Generated build/recovery artifacts.
+/output/
+/prefabs/
+
 # Generated on Linux when the proprietary Apollo implementation is not available.
 extensions/Apollo/Apollo.so
 extensions/Apollo/apollo_buffer.gml
