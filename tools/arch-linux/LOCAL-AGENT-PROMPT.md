@@ -1,40 +1,54 @@
 Work on repository `Damcore/Pixel-Composer-Arch`, branch `arch-linux`.
 
-Goal: get Pixel Composer building and launching reliably on Arch Linux, preferably native Wayland but XWayland fallback is acceptable. Do not redesign the application and do not touch `main`.
+Goal: perform the remaining **native Arch desktop QA**. Do not redo the already validated Linux port unless you reproduce a real failure. Do not touch `main`.
 
-Context already established:
-- Upstream has substantial Linux support already; this is not a full port.
-- Use GameMaker 2026.100 Beta Release 7 or a newer compatible 2026 beta, not the outdated 2024.11 version in upstream README.
-- Start with Ubuntu 24.04 target + VM runtime. Only attempt AppImage/YYC after VM launch works.
-- Existing helpers are in `tools/arch-linux/` and documentation in `ARCH-LINUX.md`.
-- Known upstream Linux issues include native file dialogs, clipboard/file drop, borderless windows, Lua and HLSL.
-- A recent upstream issue reports a startup failure on CachyOS/KDE/Wayland.
-- Suspect case-sensitive path bugs: Linux code currently uses `string_lower(filepath_resolve(...))` in library lookup paths. Do not change this blindly; reproduce first.
+Already proven on Ubuntu 24.04 with GameMaker Runtime `2026.100.0.1098`:
+- ProjectTool + automatic SDF prefab restore works.
+- GameMaker `Linux Compile` completes successfully.
+- The generated VM build starts with the official Linux runner.
+- Pixel Composer completes initialization and reaches `Entering main loop` for a 45-second smoke window.
+- `$HOME/PixelComposer/` data extraction works with the Linux GameMaker sandbox disabled.
+- bundled ImageMagick works in extract-and-run mode;
+- 16-bit PNG -> 8-bit PNG and WebP -> PNG proxy conversion works;
+- unresolved Apollo/Lua symbols are fail-closed in CI.
+
+Latest green CI evidence: run `34648573802`, commit `1a6f1db4a2aa4ce53f08c132c08fa7bfe8ca70c7`.
+
+Important expected behaviour:
+- The public repo does not contain the proprietary Apollo implementation.
+- The Linux source-only fallback disables Lua initialization, custom Lua add-ons and Lua nodes.
+- Do not treat that as a regression unless a real Apollo Linux implementation is supplied.
+- `Linux Package`/final official AppImage requires GameMaker execution/package permission. Do not bypass that licensing check.
+- Steam/Tablet compile warnings and unavailable Windows/macOS-only helper DLL warnings are currently nonfatal.
 
 Tasks:
-1. Clone the repo and checkout `arch-linux`.
-2. Record environment: Arch/CachyOS version, desktop, Wayland/X11, GPU/driver, GameMaker IDE/runtime exact versions.
-3. Run `tools/arch-linux/preflight.sh`.
-4. Open `PixelComposer.yyp` in GameMaker 2026 beta using Default config.
-5. Build/run Ubuntu VM target first. Capture the complete compiler/runtime log.
-6. If it fails, identify the first causal error, fix the smallest possible source/config issue, commit it to `arch-linux`, and rerun.
-7. After launch succeeds, smoke-test: startup, create/open project, basic node graph, image import, PNG export, save/reopen project.
-8. Then test optional export helpers: FFmpeg, ImageMagick, WebP, gifski. Prefer native Linux binaries and preserve case-sensitive paths. Fix `.exe`, backslash, or forced-lowercase assumptions when reproduced.
-9. Test under Wayland and, if needed, XWayland/X11. Do not patch rendering merely because Wayland fails until X11 comparison is known.
-10. Attempt AppImage package only after VM run is clean. YYC last.
+1. Pull the latest `arch-linux` and record Arch/CachyOS version, desktop, Wayland/X11, GPU/driver and exact GameMaker version if used.
+2. Run `tools/arch-linux/preflight.sh`.
+3. Launch Pixel Composer on the real desktop. Prefer native Wayland first; compare XWayland/X11 if anything is broken.
+4. Verify startup reaches the editor without runtime errors.
+5. Test open/save dialogs, including a path containing spaces.
+6. Test image import with a normal PNG, a 16-bit PNG and a WebP file.
+7. Test drag/drop if supported by the desktop/session.
+8. Test PNG export plus the optional FFmpeg, WebP and gifski helpers.
+9. Change a preference, restart Pixel Composer, and verify the preference persists.
+10. Exercise the application's Restart action.
+11. Create/save/reopen a small project and do a basic node-graph edit.
+12. Report clipboard, screenshot, file-drop or window-decoration limitations separately instead of conflating them with startup/build failures.
 
-Rules:
-- Keep changes minimal and Linux-gated where appropriate.
-- Do not remove upstream Windows functionality.
-- Do not commit downloaded/proprietary binaries.
-- Do not disable system security features globally unless absolutely required; report if GameMaker itself requires a host setting.
-- Commit each independently verified fix with a descriptive message.
-- Push changes to `arch-linux` if credentials allow.
+If a test fails:
+- capture the first causal runtime error and the exact reproduction;
+- compare Wayland with XWayland/X11 before changing rendering/window code;
+- make only the smallest Linux-gated fix;
+- rerun the affected test and the existing `Arch Linux build probe` workflow;
+- commit to `arch-linux` only.
 
 Report back with only:
-- exact GameMaker IDE/runtime version
-- build/run result
-- first failing error if blocked
-- commits made
-- remaining blockers
-- whether VM, AppImage, Wayland and X11 each work
+- environment;
+- native Arch launch result;
+- Wayland result;
+- XWayland/X11 result;
+- file dialog/import/export/restart/save results;
+- first causal error if blocked;
+- commits made;
+- remaining blockers;
+- whether official `Linux Package` was possible with the available GameMaker license.
