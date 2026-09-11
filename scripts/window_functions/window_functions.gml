@@ -4,8 +4,15 @@ function Program_Close() {
 }
 
 function Program_Restart() {
-	var _exePath = program_directory;
-	shell_execute("", $"start \"\" /D \"{_exePath}\" \"PixelComposer.exe\"");
+	if(OS == os_windows) {
+		var _exePath = program_directory;
+		shell_execute("", $"start \"\" /D \"{_exePath}\" \"PixelComposer.exe\"");
+	} else {
+		// On Linux/macOS parameter 0 is the current executable. Re-launch that
+		// instead of assuming the Windows PixelComposer.exe filename.
+		var _exe = parameter_string(0);
+		if(_exe != "") shell_execute_async(string_quote(_exe), "");
+	}
 	Program_Close();
 }
 

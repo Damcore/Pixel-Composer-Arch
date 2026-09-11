@@ -87,7 +87,7 @@ function __file_selector(_mode = "save", _dir = PREFERENCES.dialog_path, _fname 
 	
 	var _arg = {};
 	_arg[$ "--out"]   = _resPath;
-	_arg[$ "--pref"]  = $"{DIRECTORY}Preferences\\fs.json";
+	_arg[$ "--pref"]  = $"{DIRECTORY}Preferences/fs.json";
 	_arg[$ "--mode"]  = _mode;
 	_arg[$ "--multi"] = _multi? "true" : "false";
 	_arg[$ "--dir"]   = _dir;

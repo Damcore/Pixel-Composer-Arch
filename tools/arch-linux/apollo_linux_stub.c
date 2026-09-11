@@ -10,6 +10,7 @@
 
 API double lua_show_error(const char *s) { (void)s; return 0.0; }
 API double lua_reset(void) { return 0.0; }
+API const char *lua_get_cwd(void) { return ""; }
 API double lua_set_cwd(const char *s) { (void)s; return 0.0; }
 API double lua_state_create(void) { return 0.0; }
 API double lua_state_destroy(double a) { (void)a; return 0.0; }
