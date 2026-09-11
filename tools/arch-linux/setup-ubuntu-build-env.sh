@@ -8,7 +8,7 @@ fi
 
 . /etc/os-release
 if [[ "${ID:-}" != "ubuntu" ]]; then
-  echo "warning: this helper is tested for Ubuntu 24.04; detected ${PRETTY_NAME:-unknown}." >&2
+  echo "warning: this helper is intended for Ubuntu 24.04; detected ${PRETTY_NAME:-unknown}." >&2
 fi
 
 if ! command -v sudo >/dev/null 2>&1; then
@@ -20,21 +20,30 @@ sudo apt-get update
 sudo apt-get install -y \
   build-essential \
   ca-certificates \
+  clang \
   curl \
+  ffmpeg \
   git \
-  libglu1-mesa \
-  libopenal1 \
-  libpulse0 \
-  libssl3 \
-  libx11-6 \
-  libxext6 \
-  libxrandr2 \
-  libxxf86vm1 \
+  libcurl4-openssl-dev \
+  libfuse2 \
+  libgl1-mesa-dev \
+  libglu1-mesa-dev \
+  libopenal-dev \
+  libssl-dev \
+  libxfixes-dev \
+  libxrandr-dev \
+  libxxf86vm-dev \
+  openssh-server \
   pkg-config \
+  pulseaudio \
   unzip \
   xdg-utils \
-  zip
+  zip \
+  zlib1g-dev
 
 echo
-echo "Base Ubuntu build dependencies installed."
-echo "Next: install the current GameMaker 2026.100 Beta Ubuntu IDE/runtime from the official release page, then open PixelComposer.yyp."
+echo "GameMaker Ubuntu build prerequisites installed."
+echo "Next: install the current GameMaker 2026.100 Beta Ubuntu .deb, sign in, and open PixelComposer.yyp."
+echo
+echo "Note for Ubuntu 24.04: do NOT disable AppArmor user-namespace restrictions pre-emptively."
+echo "Only apply GameMaker's documented sysctl workaround if the build actually fails because of that restriction."
