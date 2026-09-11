@@ -111,7 +111,7 @@ jobs:
           test -n "$BUILD_ZIP"
           mkdir -p "$RUNNER_TEMP/vm-build"
           unzip -q "$BUILD_ZIP" -d "$RUNNER_TEMP/vm-build"
-          test -s "$RUNNER_TEMP/vm-build/game.unx"
+          test -s "$RUNNER_TEMP/vm-build/assets/game.unx"
 
       - name: Smoke-test bundled ImageMagick import proxy
         run: |
