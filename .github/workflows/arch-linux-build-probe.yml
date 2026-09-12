@@ -25,6 +25,7 @@ jobs:
     env:
       RUNTIME_VERSION: 2026.100.0.1098
       RUNTIME_FEED: https://gms.yoyogames.com/Zeus-Runtime-NuBeta.rss
+      PXC_UI_FREEZE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,6 +155,7 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/vm-smoke.log"
           echo "VM_SMOKE_EXIT=$rc"
+          grep -q '\[Linux diagnostic\] UI snapshot freeze enabled' "$RUNNER_TEMP/vm-smoke.log"
           if grep -q 'ERR:{' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'ERROR!!!' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi
           if grep -q 'Unable to find function lua_' "$RUNNER_TEMP/vm-smoke.log"; then exit 1; fi

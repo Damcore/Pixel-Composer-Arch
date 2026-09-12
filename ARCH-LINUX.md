@@ -120,6 +120,15 @@ The Ubuntu build box is deliberate: it matches GameMaker's supported Linux build
 
 ## Native Arch QA still required
 
+The current branch was also smoke-launched on the local CachyOS desktop on
+2026-09-12 using the isolated VM build and
+`env -u PXC_UI_STATE_RESET PXC_UI_FREEZE=1 ./runner`. The session was KDE
+Plasma 6.7.4 on Wayland with the GameMaker X11/GLX runner through XWayland,
+AMD Radeon RX 9070/amdgpu and Mesa 26.2.2. It reached `Entering main loop` and
+remained alive for 30 seconds without a GameMaker runtime error. The existing
+flicker result remains the user's visual confirmation; this smoke does not
+replace the interaction checks below.
+
 On a real Arch desktop, test at minimum:
 
 1. native Wayland launch;

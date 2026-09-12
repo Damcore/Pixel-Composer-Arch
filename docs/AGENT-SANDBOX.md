@@ -25,6 +25,9 @@ ${XDG_CACHE_HOME:-$HOME/.cache}/pixel-composer-arch-sandbox
 ```
 
 Override it with `PXC_SANDBOX_CACHE=/some/path` if needed. It uses a separate smoke-test `$HOME`, so it does not delete or overwrite a developer's real `~/PixelComposer` data.
+The project is archived from committed `HEAD` into the external cache before
+prefab restore and compilation, so the verification run also leaves the source
+checkout clean. Uncommitted edits are not included in this gate.
 
 If the sandbox already has all required Ubuntu packages, skip package installation with:
 
@@ -45,7 +48,7 @@ PXC_SMOKE_SECONDS=45
 1. On apt-based systems, installs the small set of compiler/runtime/headless-display dependencies when root or `sudo` is available.
 2. Installs GameMaker ProjectTool, PackageTool and GMPM from GameMaker's package registry into the external cache.
 3. Restores the missing `io.gamemaker.sdfshaders-1.0.0` prefab package.
-4. Runs [`pre_build_step.sh`](../pre_build_step.sh), which regenerates shader/data packs and creates an Apollo compatibility fallback if the proprietary extension is absent.
+4. Archives committed `HEAD` into the external cache, then runs [`pre_build_step.sh`](../pre_build_step.sh) there. This regenerates shader/data packs and creates an Apollo compatibility fallback if the proprietary extension is absent without rewriting the checkout.
 5. Downloads the official Linux Igor bootstrap from GameMaker and installs runtime `2026.100.0.1098` from the beta runtime feed.
 6. Runs GameMaker `Linux Compile` against [`PixelComposer.yyp`](../PixelComposer.yyp).
 7. Verifies `Final Compile finished` and extracts the resulting `PixelComposer.zip`.
@@ -54,6 +57,10 @@ PXC_SMOKE_SECONDS=45
 10. Extracts the matching GameMaker Linux runner from the installed runtime and launches the compiled project under Xvfb.
 11. Fails if the runtime log contains a GameMaker `ERR:{...}`, `ERROR!!!`, or unresolved `lua_*` loader function.
 12. Verifies that Pixel Composer actually unpacked its theme data and stayed alive for the complete smoke window.
+
+The CI build probe runs the same startup smoke with `PXC_UI_FREEZE=1` and
+requires the corresponding activation marker. A replay marker needs a real
+rendering interaction; Xvfb startup alone cannot establish that visual path.
 
 ## Important learnings from the sandbox work
 

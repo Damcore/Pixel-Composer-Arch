@@ -8,7 +8,8 @@ Node base VFX editor for pixel art.
 
 
 ## Set up guides
-- Install GameMaker: Studio IDE 2024.11.0.179 (runtime 2024.11.0.227)
+- Upstream Windows/macOS setup: GameMaker Studio IDE 2024.11.0.179 (runtime 2024.11.0.227)
+- For the validated Arch Linux workflow, see [ARCH-LINUX.md](ARCH-LINUX.md).
 - The `default` config already disable unavailable extensions.
 - If running on Mac, delete  PixelComposer\datafiles\data\themes\default folder (keep the zip file) before running.
 - To use native exception handler (for more information) goto `debug` (crtl+T > debug) and comment out `setException()`.
@@ -21,4 +22,3 @@ Node base VFX editor for pixel art.
 - [Documentation](https://pixel-composer-doc.readthedocs.io/en/latest/ui/)
 - [Download from itch.io](https://makham.itch.io/pixel-composer)
 - [Steam page](https://store.steampowered.com/app/2299510?beta=0)
-

@@ -31,6 +31,10 @@ gmedit
 
 post_run_step.sh
 
+# Python bytecode/cache files are never source inputs.
+__pycache__/
+*.py[cod]
+
 # Generated build/recovery artifacts.
 /output/
 /prefabs/
