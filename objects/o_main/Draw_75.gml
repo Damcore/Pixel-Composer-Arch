@@ -1,4 +1,6 @@
 /// @description tooltip filedrop
+// Keep main-object overlays from changing the frozen diagnostic image.
+if(linux_ui_frozen) exit;
 if(IS_CMD) exit;
 if(winMan_isMinimized()) exit;
 

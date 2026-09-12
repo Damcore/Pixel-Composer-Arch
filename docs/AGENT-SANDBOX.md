@@ -179,6 +179,97 @@ Request external help only when one of these is actually needed:
 
 ## Native Arch handoff after sandbox success
 
+### Linux UI flicker: confirmed workaround
+
+**Real-desktop result, 2026-09-12:** the user reported that menu/panel flicker
+disappeared with `PXC_UI_FREEZE=1`, after reporting no change with
+`PXC_UI_STATE_RESET=1`. Environment: Arch/CachyOS, KDE Plasma 6, Wayland session;
+GameMaker runtime `2026.100.0.1098` using X11/GLX via XWayland. The affected
+project's large inner UI/menu areas blinked at the animation/frame-change rate,
+particularly while `Rendering...` was displayed. The inspected desktop log
+confirmed snapshot activation but did not show the replay marker. Therefore the
+successful result cannot yet be attributed specifically to freezing: rendering
+the main UI through the extra surface may itself be sufficient. The source build and
+45-second Xvfb startup gate also passed with the snapshot mode enabled; the
+visual result comes from the user, not the headless test.
+
+**What this establishes:** enabling the UI snapshot drawing path avoids the
+reported flicker on this setup. The
+working hypothesis is that repeatedly drawing/compositing the UI during partial
+node rendering exposes the problem. This does not prove a particular state
+leak, surface corruption, driver bug or compositor fault: the extra surface
+also changes the drawing path. Do not record an exact root cause as established.
+
+#### Reproduce the working launch on another installation
+
+Build this branch with the snapshot implementation, then run from the directory
+containing the matching `runner` and `assets/`:
+
+```bash
+env -u PXC_UI_STATE_RESET PXC_UI_FREEZE=1 ./runner
+```
+
+The variable is read at startup; it is not a saved preference or enabled by
+default. Carry it into each new installation's launcher/desktop shortcut. An
+old build will not acquire the workaround just by setting the variable.
+Required log markers are:
+
+```text
+[Linux diagnostic] UI snapshot freeze enabled
+[Linux diagnostic] Replaying completed UI snapshot during rendering
+```
+
+The replay marker is printed once per process, when a ready snapshot is first
+reused. For a control run, close the application and launch the same build with
+both `PXC_UI_FREEZE` and `PXC_UI_STATE_RESET` unset. Avoid simultaneous instances.
+
+#### Implementation and limits
+
+- [Create event](../objects/o_main/Create_0.gml): Linux-only launch switches and
+  snapshot state; the earlier state-reset diagnostic remains independently opt-in.
+- [Main UI draw](../objects/o_main/Draw_64.gml): cache panels, menus, notes and
+  window manager in a separate surface. Mark it ready only when `RENDERING` is
+  undefined; replay it while rendering is pending. Resize/surface loss
+  invalidates the cached image.
+- [GUI-end draw](../objects/o_main/Draw_75.gml): skip the main object's overlays
+  during replay. Other objects' independent draws are not captured.
+- [Cleanup event](../objects/o_main/CleanUp_0.gml): release the snapshot surface.
+
+Rendering and stepping continue, but controls processed by the cached draw
+temporarily do not process input; the preview pauses until rendering finishes.
+The new surface also adds GPU memory/copy overhead. This is a confirmed opt-in
+workaround, not yet a general production fix. Do not remove it or replace it
+with a state reset without equivalent real-desktop evidence. A future permanent
+fix should retain stable completed UI imagery while preserving responsive input.
+
+#### Previous negative results: do not repeat without new evidence
+
+The user had already tested `SDL_VIDEODRIVER=x11`, VSync, Gamescope, increased
+`render_max_time`, and continued Graph/Inspector drawing while rendering, with
+no improvement. `SDL_VIDEODRIVER=wayland` did not force native Wayland.
+Synchronous `RenderSync()` changed the flicker into a solid blocked area.
+A surface-target guard found no target leak. Multiple instances were excluded;
+the cogwheels animation worked. Logs showed no causal runtime/Lua error or crash.
+
+The subsequent UI-entry reset of shader, blend, color-write, depth, alpha-test,
+culling, scissor, world matrix and draw color/alpha also made no visible
+difference. It did not cover all possible graphics state or surface contents.
+No real X11-session comparison was established by these tests; selecting SDL's
+X11 driver inside Wayland still uses XWayland.
+
+#### Regression checks
+
+1. Run the [canonical gate](../tools/arch-linux/sandbox-build-smoke.sh) with
+   `PXC_UI_FREEZE=1`; verify compile, startup and the activation marker.
+2. On a real desktop, open the affected project and test manual frame changes
+   and playback long enough to trigger pending rendering. Verify the replay
+   marker and stable menus/panels; a startup-only pass is insufficient.
+3. Check that the preview advances after rendering completes and controls work
+   again. Exercise stopping playback, resizing, minimize/restore and project
+   switching. These broader interaction checks remain to be validated.
+4. Compare the same build with both switches unset when investigating causality.
+   Preserve Windows behaviour and do not claim universal GPU/compositor coverage.
+
 Once the one-command sandbox gate is green, do not continue inventing Linux source fixes. Move to the real desktop checks in [`tools/arch-linux/LOCAL-AGENT-PROMPT.md`](../tools/arch-linux/LOCAL-AGENT-PROMPT.md): Wayland first, XWayland/X11 comparison if needed, file dialogs, normal/16-bit/WebP image import, PNG/export helpers, preferences/restart and save/reopen.
 
 If native Arch fails, capture the first causal error and compare with the already-green Ubuntu/Xvfb baseline before changing application code.

@@ -16,7 +16,37 @@ The Linux VM path is now **validated end to end** with GameMaker Runtime `2026.1
 
 Latest green evidence: GitHub Actions run `34648573802` on commit `1a6f1db4a2aa4ce53f08c132c08fa7bfe8ca70c7`.
 
-Native **Arch + Wayland/XWayland GUI behaviour still needs a real desktop smoke test**. The Ubuntu VM/runtime result proves the GameMaker project and Linux source path, not every compositor integration.
+On 2026-09-12, a real Arch/CachyOS + KDE Plasma 6 Wayland/XWayland test confirmed that the opt-in UI snapshot workaround below removes menu/panel flicker during frame changes and animation. Broader native desktop QA remains open; the Ubuntu VM/runtime result does not prove every compositor integration.
+
+## Flickering menus during animation: confirmed workaround
+
+If large parts of the interface blink in time with frame changes, especially
+while `Rendering...` appears, launch a build containing this branch's snapshot
+workaround from the directory containing its matching `runner` and `assets/`:
+
+```bash
+env -u PXC_UI_STATE_RESET PXC_UI_FREEZE=1 ./runner
+```
+
+The workaround is **not enabled by default** and is not saved in preferences.
+On another installation, use a build containing these changes and put
+`PXC_UI_FREEZE=1` in the launch environment every time (including a desktop
+shortcut or launcher). Setting the variable on an older build has no effect.
+The startup log must contain `UI snapshot freeze enabled`; actual use logs
+`Replaying completed UI snapshot during rendering` once per process.
+
+The main menus/panels and preview retain their last completed image during node
+rendering, then update when rendering finishes. This eliminated the reported
+flicker in the user's project. UI controls drawn in that image temporarily stop
+processing input, and the preview pauses while rendering is pending. This is a
+confirmed workaround for the tested setup, not yet a generally validated
+production fix.
+
+The evidence points to the UI drawing/compositing path during unfinished node
+rendering. It does not identify a particular faulty GPU call or prove that
+GameMaker, XWayland or the driver alone is responsible. VSync, Gamescope and a
+graphics-state reset did not resolve this case. See the [full findings and
+regression checks](docs/AGENT-SANDBOX.md#linux-ui-flicker-confirmed-workaround).
 
 ## GameMaker toolchain
 

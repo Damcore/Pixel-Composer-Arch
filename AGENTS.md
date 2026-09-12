@@ -44,6 +44,7 @@ Never ask for Apollo merely to compile or start the editor. [`pre_build_step.sh`
 - `Linux Compile` produces the VM payload, not a standalone runner. The test runner comes from the matching GameMaker runtime's `linux/runner.zip`.
 - Missing proprietary Apollo code is handled by generated no-op GML bridges plus a small native shim. Lua initialization/custom Lua add-ons/Lua nodes remain disabled in that fallback mode.
 - Unsupported nodes must fail closed rather than warn and continue into unavailable native code.
+- Preserve the opt-in Linux UI snapshot workaround (`PXC_UI_FREEZE=1`): the user confirmed on 2026-09-12 that it eliminates menu/panel flicker during frame changes and animation on Arch/CachyOS + Plasma 6 Wayland/XWayland. Keep the last completed main UI image visible while `RENDERING` is pending. A graphics-state reset alone did not help. Read the [flicker findings and regression checks](docs/AGENT-SANDBOX.md#linux-ui-flicker-confirmed-workaround) before changing this path; the exact lower-level cause remains unproven. This is opt-in, so new installations need the launch variable and a build containing the workaround.
 - Do not commit downloaded GameMaker runtimes, GameMaker IDE packages, proprietary Apollo files, restored prefab packages, build output, or generated smoke-test artifacts.
 
 ## Debugging discipline

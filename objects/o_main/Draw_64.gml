@@ -1,7 +1,44 @@
 /// @description init
+linux_ui_frozen = false;
 if(IS_CMD) exit;
 if(winMan_isMinimized()) exit;
 if(USE_TEXTUREGROUP && texturegroup_get_status("UI") == texturegroup_status_loading) exit;
+
+// Diagnostic only; leave GameMaker's GUI view/projection and target intact.
+if(linux_ui_state_reset) {
+	shader_reset();
+	gpu_set_blendenable(true);
+	gpu_set_blendmode(bm_normal);
+	gpu_set_colorwriteenable(true, true, true, true);
+	gpu_set_ztestenable(false);
+	gpu_set_zwriteenable(false);
+	gpu_set_alphatestenable(false);
+	gpu_set_cullmode(cull_noculling);
+	gpu_set_scissor(0, 0, WIN_W, WIN_H);
+	matrix_set(matrix_world, matrix_build_identity());
+	draw_set_color(c_white);
+	draw_set_alpha(1);
+}
+
+if(linux_ui_freeze) {
+	if(!surface_exists(linux_ui_snapshot)) {
+		linux_ui_snapshot_ready = false;
+	} else if(surface_get_width(linux_ui_snapshot) != WIN_W
+		|| surface_get_height(linux_ui_snapshot) != WIN_H) {
+		linux_ui_snapshot_ready = false;
+	}
+	linux_ui_snapshot = surface_verify(linux_ui_snapshot, WIN_W, WIN_H);
+	linux_ui_frozen = linux_ui_snapshot_ready && RENDERING != undefined;
+	if(linux_ui_frozen) {
+		if(!linux_ui_freeze_logged) {
+			show_debug_message("[Linux diagnostic] Replaying completed UI snapshot during rendering");
+			linux_ui_freeze_logged = true;
+		}
+		draw_surface_ext(linux_ui_snapshot, 0, 0, 1, 1, 0, c_white, 1);
+		exit;
+	}
+	surface_set_target(linux_ui_snapshot);
+}
 
 _MOUSE_BLOCK = MOUSE_BLOCK;
 if(MOUSE_BLOCK) MOUSE_BLOCK--;
@@ -94,3 +131,9 @@ if(DROPPER_DROPPING) {
 }
 
 DROPPER_DROPPING = false;
+
+if(linux_ui_freeze) {
+	surface_reset_target();
+	linux_ui_snapshot_ready = RENDERING == undefined;
+	draw_surface_ext(linux_ui_snapshot, 0, 0, 1, 1, 0, c_white, 1);
+}

@@ -1,5 +1,22 @@
 /// @description init
 
+// Opt-in Linux diagnostic: isolate UI drawing from node-render GPU state.
+linux_ui_state_reset = false;
+if(os_type == os_linux)
+	linux_ui_state_reset = environment_get_variable("PXC_UI_STATE_RESET") == "1";
+if(linux_ui_state_reset)
+	show_debug_message("[Linux diagnostic] UI graphics-state reset enabled");
+
+linux_ui_freeze = false;
+if(os_type == os_linux)
+	linux_ui_freeze = environment_get_variable("PXC_UI_FREEZE") == "1";
+linux_ui_snapshot = -1;
+linux_ui_snapshot_ready = false;
+linux_ui_frozen = false;
+linux_ui_freeze_logged = false;
+if(linux_ui_freeze)
+	show_debug_message("[Linux diagnostic] UI snapshot freeze enabled");
+
 #region log
 	var path = "log_temp.txt";
 	if(os_type == os_macosx) // adding log file in resource directory will causes code-signing problem on macos.

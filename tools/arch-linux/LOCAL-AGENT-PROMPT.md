@@ -20,6 +20,8 @@ Important expected behaviour:
 - Do not treat that as a regression unless a real Apollo Linux implementation is supplied.
 - `Linux Package`/final official AppImage requires GameMaker execution/package permission. Do not bypass that licensing check.
 - Steam/Tablet compile warnings and unavailable Windows/macOS-only helper DLL warnings are currently nonfatal.
+- Real-desktop finding (2026-09-12): `PXC_UI_FREEZE=1` eliminated menu/panel flicker during frame changes and animation on Arch/CachyOS + Plasma 6 Wayland/XWayland. The prior UI graphics-state reset did not help. Preserve the completed-UI snapshot workaround; the exact lower-level cause is not proven. Read the [findings and regression checks](../../docs/AGENT-SANDBOX.md#linux-ui-flicker-confirmed-workaround).
+- On a new installation, build the snapshot implementation and launch with `env -u PXC_UI_STATE_RESET PXC_UI_FREEZE=1 ./runner` from the VM build directory. This is opt-in on every launch, not a saved preference. Verify both activation and actual replay log markers, then test the affected project; Xvfb startup alone cannot verify the visual fix.
 
 Tasks:
 1. Pull the latest `arch-linux` and record Arch/CachyOS version, desktop, Wayland/X11, GPU/driver and exact GameMaker version if used.
