@@ -197,6 +197,21 @@ extending `__initThemeEmpty()` with the fields node construction reads; loading 
 minimal project instead of a sample; `--server`/`--persist`, in case they take a
 different startup path.
 
+#### Headless project-loading investigation
+
+On 2026-09-14, the documented sample-project reproduction still failed first in
+`node_value_surface` while reading the missing
+`THEME.node_junction_surface_uv`; the later connection and `setHeight` errors
+were therefore not treated as independent failures. The empty command-line
+theme initialized in `0.09 ms` in that run.
+
+Loading the regular theme for command-line runs is being tested through
+`__initTheme()` because a loaded project may construct any registered node and
+therefore may read theme fields outside the manually maintained empty-theme
+subset. If this route fails, record its first exact error and measured startup
+cost here before trying to extend `__initThemeEmpty()`. A minimal project and
+the `--server`/`--persist` start paths have not been tried in this investigation.
+
 ### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
