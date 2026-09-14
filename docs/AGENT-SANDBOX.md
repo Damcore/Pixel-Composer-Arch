@@ -212,6 +212,14 @@ subset. If this route fails, record its first exact error and measured startup
 cost here before trying to extend `__initThemeEmpty()`. A minimal project and
 the `--server`/`--persist` start paths have not been tried in this investigation.
 
+Building that commit through `sudo /usr/local/bin/pixel-composer-build
+--build-only` in the agent session failed before the build started with
+`sudo: a terminal is required to read the password` and `sudo: a password is
+required`. This only establishes that the root-only local wrapper could not be
+used through that session. A direct run of the canonical source-only helper
+with a writable copy of the existing cache under `/tmp` is the next attempted
+route; its result is not yet known.
+
 ### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
