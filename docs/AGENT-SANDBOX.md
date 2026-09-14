@@ -169,11 +169,12 @@ GameMaker runner sets no `WM_CLASS` and no startup notification id - verified
 with `xprop` on a real Plasma session, where a startup notification would
 otherwise hang until it times out.
 
-### 10b. The command-line mode does not load a project yet
+### 10b. Command-line project loading needs UI-independent initialization
 
 `--headless` exists and its switches are parsed in
-[`objects/o_main/Create_0.gml`](../objects/o_main/Create_0.gml), but a run with a
-project argument does not reach any output on this branch.
+[`objects/o_main/Create_0.gml`](../objects/o_main/Create_0.gml). Before the fixes
+recorded below, a run with a project argument did not reach any output on this
+branch.
 
 Measured with 1.21.9.210 on Debian 13, `xvfb-run ./runner <project>.pxc
 --headless -out <dir>`:
@@ -187,15 +188,9 @@ Measured with 1.21.9.210 on Debian 13, `xvfb-run ./runner <project>.pxc
    `nodeLoad`. That is a theme sprite; command-line runs use
    `__initThemeEmpty()` instead of `__initTheme()`.
 
-**Unverified suspicion:** the command-line path is not maintained for runs with
-a loaded project, because node construction reads theme data the empty theme does
-not carry. Whether the second failure is the last one or the next in a chain is
-open.
-
-Not tried yet: running `__initTheme()` under `IS_CMD` and measuring the cost;
-extending `__initThemeEmpty()` with the fields node construction reads; loading a
-minimal project instead of a sample; `--server`/`--persist`, in case they take a
-different startup path.
+The later investigation established that both project construction and animated
+export had UI dependencies that were absent in command-line mode. The full
+result and remaining limits follow.
 
 #### Headless project-loading investigation
 
@@ -243,6 +238,23 @@ the animated export, then failed first in `AnimationManager.setFrame` because
 `PANEL_ANIMATION.previous_move` could not be resolved. Command-line startup
 does not construct `PANEL_ANIMATION`; guarding that UI-only assignment is the
 next attempted fix. `--server` and `--persist` remain untested.
+
+After guarding the panel assignment, the canonical 45-second build/startup gate
+passed. Repeating the temporary animation-sequence export produced a valid
+64x64 RGBA PNG but did not finish within 240 seconds under llvmpipe; the process
+was still consuming CPU and emitted no runtime error, so this run only
+establishes a timeout, not a deadlock or a complete sequence export.
+
+Changing only that temporary project's Export node to `Single image` completed
+with exit code 0 and `CLI: Export 1 file completed`. The saved
+`single0010.png` was a valid, nonempty 64x64 RGBA image with two pixel values
+(3228 opaque white pixels and 868 transparent pixels). The suffix comes from
+the sample's saved `%d%n%3f%i` export template. This establishes the Linux
+headless path through project loading, synchronous graph rendering, file export
+and normal process exit. The regular theme added about 0.6 seconds in the first
+measured command-line run; extending `__initThemeEmpty()` was not tried because
+the full theme resolved arbitrary node sprite fields. `--server` and
+`--persist` were not needed for this path and remain untested.
 
 ### 11. Official packaging is a different gate from compilation
 
