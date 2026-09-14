@@ -73,7 +73,9 @@ function AnimationManager(_project = PROJECT) constructor {
 		frame_progress = _c != current_frame;
 		
 		if(frame_progress) {
-			PANEL_ANIMATION.previous_move = current_frame - _c;
+			// The batch renderer advances frames without constructing UI panels.
+			if(PANEL_ANIMATION != undefined)
+				PANEL_ANIMATION.previous_move = current_frame - _c;
 			last_time = 0;
 			RenderAll();
 		}

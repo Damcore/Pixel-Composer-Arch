@@ -225,6 +225,25 @@ Copying the complete root-owned cache for that route failed at
 the canonical build had not started. A narrower copy of only the required
 GameMaker tools, bootstrap and runtime caches has not yet been tried.
 
+The narrower cache copy allowed the canonical helper to reach `Final Compile
+finished` and `Igor complete`. Its deliberately shortened 10-second startup
+window ended before theme extraction, so that invocation did not pass the full
+startup gate; this does not establish a runtime failure. The resulting runner
+loaded the documented animation project in `463.43 ms`. Regular theme
+initialization took `591.28 ms` in that first measurement, compared with
+`0.09 ms` for the empty theme, and the previous
+`node_junction_surface_uv` failure did not recur.
+
+That sample then reported `Export: Path is empty` and exported zero files. This
+was conditional on the sample's active Export node having an empty saved path:
+`-out` is parsed as the custom graph argument `out`, and the project contains no
+Argument node that consumes that tag. A temporary copy with only the saved
+Export path changed to `/tmp/pxc-headless-render/animation.png` loaded and began
+the animated export, then failed first in `AnimationManager.setFrame` because
+`PANEL_ANIMATION.previous_move` could not be resolved. Command-line startup
+does not construct `PANEL_ANIMATION`; guarding that UI-only assignment is the
+next attempted fix. `--server` and `--persist` remain untested.
+
 ### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
