@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Pixel Composer
+GenericName=Node-based pixel art editor
+Comment=Create procedural pixel art, tilesets and animations from a node graph
+Exec=@LAUNCHER@
+Icon=pixel-composer
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=Pixel;Sprite;Tileset;Node;Procedural;
+# The GameMaker runner sets no WM_CLASS and no startup notification id, so a
+# StartupWMClass would never match and a startup notification would hang until
+# it times out.
+StartupNotify=false

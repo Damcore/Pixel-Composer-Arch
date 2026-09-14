@@ -29,6 +29,18 @@ The project is archived from committed `HEAD` into the external cache before
 prefab restore and compilation, so the verification run also leaves the source
 checkout clean. Uncommitted edits are not included in this gate.
 
+On a host that is not apt-based, or to keep build dependencies off the host
+entirely, run the same gate inside a container:
+
+```bash
+./tools/linux/build-in-container.sh
+```
+
+It needs podman or docker, mounts the checkout read-only and executes the
+canonical helper inside Ubuntu 24.04. The cache/output location is unchanged, so
+[`tools/linux/install.sh`](../tools/linux/install.sh) can install the result
+directly.
+
 If the sandbox already has all required Ubuntu packages, skip package installation with:
 
 ```bash
@@ -143,7 +155,21 @@ Entering main loop.
 
 Always separate warnings from the first causal runtime error.
 
-### 10. Official packaging is a different gate from compilation
+### 10. Installing the build is a separate, scriptable step
+
+`Linux Compile` plus the runtime's runner produce a directory, not an installed
+application. [`tools/linux/install.sh`](../tools/linux/install.sh) is the
+deployment side of that: application directory, launcher, desktop entry and
+icon, with an `--uninstall` counterpart.
+
+Two properties of the launcher are not cosmetic. `PXC_UI_FREEZE=1` has to be in
+the launch environment because it is read at startup and never stored in
+preferences, and the desktop entry sets `StartupNotify=false` because the
+GameMaker runner sets no `WM_CLASS` and no startup notification id - verified
+with `xprop` on a real Plasma session, where a startup notification would
+otherwise hang until it times out.
+
+### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
 
@@ -163,6 +189,8 @@ A fresh agent should expect these files to exist on `arch-linux`:
 - [`options/linux/options_linux.yy`](../options/linux/options_linux.yy)
 - [`pre_build_step.sh`](../pre_build_step.sh)
 - [`tools/arch-linux/sandbox-build-smoke.sh`](../tools/arch-linux/sandbox-build-smoke.sh)
+- [`tools/linux/build-in-container.sh`](../tools/linux/build-in-container.sh)
+- [`tools/linux/install.sh`](../tools/linux/install.sh)
 - [`tools/arch-linux/prepare-apollo-gml-stubs.sh`](../tools/arch-linux/prepare-apollo-gml-stubs.sh)
 - [`tools/arch-linux/apollo_linux_stub.c`](../tools/arch-linux/apollo_linux_stub.c)
 - [`.github/workflows/arch-linux-build-probe.yml`](../.github/workflows/arch-linux-build-probe.yml)

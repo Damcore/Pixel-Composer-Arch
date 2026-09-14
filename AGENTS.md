@@ -21,6 +21,8 @@ The automated source-only Linux gate is:
 
 It mirrors the proven path in [`.github/workflows/arch-linux-build-probe.yml`](.github/workflows/arch-linux-build-probe.yml): restore GameMaker prefabs, prepare generated data/Apollo fallbacks, install the pinned runtime, run `Linux Compile`, exercise the bundled ImageMagick proxy, and launch the VM build with the official Linux runner under Xvfb.
 
+On hosts without an apt environment, [`tools/linux/build-in-container.sh`](tools/linux/build-in-container.sh) runs that same helper inside an Ubuntu 24.04 container, and [`tools/linux/install.sh`](tools/linux/install.sh) installs the resulting build as a desktop application. Keep both in sync with the canonical gate rather than growing a second build path.
+
 A successful run must include `Final Compile finished`, create `assets/game.unx`, unpack Pixel Composer data into the isolated smoke-test home, reach `Entering main loop`, and survive the configured smoke window without a GameMaker runtime error or unresolved Lua symbol.
 
 ## Missing inputs and when to ask the user

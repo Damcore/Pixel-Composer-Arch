@@ -9,6 +9,7 @@ on:
       - 'pre_run.py'
       - 'datasrc/update.py'
       - 'tools/arch-linux/**'
+      - 'tools/linux/**'
       - 'options/linux/**'
       - 'objects/o_main/**'
       - 'scripts/**'
@@ -33,7 +34,10 @@ jobs:
           fetch-depth: 1
 
       - name: Validate sandbox helper syntax
-        run: bash -n ./tools/arch-linux/sandbox-build-smoke.sh
+        run: |
+          bash -n ./tools/arch-linux/sandbox-build-smoke.sh
+          bash -n ./tools/linux/build-in-container.sh
+          bash -n ./tools/linux/install.sh
 
       - name: Install Linux build dependencies
         run: |

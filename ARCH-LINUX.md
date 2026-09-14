@@ -94,9 +94,49 @@ For source-only Linux builds this branch generates a small compatibility shim pl
 
 Do not commit proprietary Apollo binaries to this repository.
 
+## Build and install without the GameMaker IDE
+
+The shortest path from a checkout to a launchable editor needs only podman or
+docker; the GameMaker toolchain stays inside a disposable Ubuntu 24.04
+container:
+
+```bash
+./tools/linux/build-in-container.sh   # runs the canonical gate in a container
+./tools/linux/install.sh              # installs the resulting build
+./tools/linux/install.sh --uninstall  # removes it again
+```
+
+`build-in-container.sh` mounts the checkout read-only and runs
+[`tools/arch-linux/sandbox-build-smoke.sh`](tools/arch-linux/sandbox-build-smoke.sh)
+inside the container, so the container build is the same validated gate,
+including the startup smoke test. Downloads and the finished build stay in
+`${PXC_SANDBOX_CACHE:-~/.cache/pixel-composer-arch-sandbox}`.
+
+`install.sh` installs system-wide when run as root (`/opt/pixel-composer`,
+`/usr/local/bin`, `/usr/local/share`) and per-user otherwise
+(`~/.local/lib`, `~/.local/bin`, `~/.local/share`); `--user`, `--app-dir`,
+`--bin-dir` and `--data-dir` override that. It writes the application
+directory, a launcher that carries `PXC_UI_FREEZE=1` (see above - the variable
+is read at startup, so every launcher and desktop shortcut has to set it), a
+desktop entry and the application icon.
+
+Afterwards it checks the installed runner with `ldd` and fails if a shared
+library is missing. That check exists because the build container has libraries
+a fresh desktop may not: without `libGLU.so.1` the runner aborts with
+`error while loading shared libraries` and never opens a window.
+
+```bash
+sudo pacman -S --needed glu openal libpulse      # Arch
+sudo apt install libglu1-mesa libopenal1 libpulse0  # Debian/Ubuntu
+```
+
+This is still the VM build plus the official GameMaker runner, not an official
+`Linux Package`; see the toolchain section above.
+
 ## Arch host workflow
 
-Recommended host tools:
+For an interactive build box instead of the one-shot container above,
+recommended host tools:
 
 ```bash
 sudo pacman -S --needed podman distrobox
@@ -117,6 +157,12 @@ For host diagnostics:
 ```
 
 The Ubuntu build box is deliberate: it matches GameMaker's supported Linux build environment while the resulting Linux application is then tested on Arch.
+
+A verified example of the container path: on Debian 13 (in an unprivileged LXC
+container with root podman - rootless podman failed there in `newuidmap`), a
+warm-cache `build-in-container.sh` run reproduced the gate and `install.sh`
+produced a working KDE Plasma 6 menu entry. The build cache was 1.3 GB, the
+installed application 255 MB.
 
 ## Native Arch QA still required
 
