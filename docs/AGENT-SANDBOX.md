@@ -220,6 +220,11 @@ used through that session. A direct run of the canonical source-only helper
 with a writable copy of the existing cache under `/tmp` is the next attempted
 route; its result is not yet known.
 
+Copying the complete root-owned cache for that route failed at
+`/var/lib/pixel-composer-build/smoke-home/.cache` with `Permission denied`;
+the canonical build had not started. A narrower copy of only the required
+GameMaker tools, bootstrap and runtime caches has not yet been tried.
+
 ### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
