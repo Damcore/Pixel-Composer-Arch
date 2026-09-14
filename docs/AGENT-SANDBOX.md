@@ -169,6 +169,34 @@ GameMaker runner sets no `WM_CLASS` and no startup notification id - verified
 with `xprop` on a real Plasma session, where a startup notification would
 otherwise hang until it times out.
 
+### 10b. The command-line mode does not load a project yet
+
+`--headless` exists and its switches are parsed in
+[`objects/o_main/Create_0.gml`](../objects/o_main/Create_0.gml), but a run with a
+project argument does not reach any output on this branch.
+
+Measured with 1.21.9.210 on Debian 13, `xvfb-run ./runner <project>.pxc
+--headless -out <dir>`:
+
+1. The run died in panel construction reading
+   `MENU_ITEMS.steam_workshop_panel`. `__initPanel` is skipped when `IS_CMD`, but
+   a display refresh still rebuilt `Panel_Menu`. Fixed by gating the panel half
+   of `display_refresh` on `IS_CMD` while still queueing the render pass.
+2. It then reached project loading and died on
+   `node_junction_surface_uv` in `node_value_surface` -> `Node_Shape` ->
+   `nodeLoad`. That is a theme sprite; command-line runs use
+   `__initThemeEmpty()` instead of `__initTheme()`.
+
+**Unverified suspicion:** the command-line path is not maintained for runs with
+a loaded project, because node construction reads theme data the empty theme does
+not carry. Whether the second failure is the last one or the next in a chain is
+open.
+
+Not tried yet: running `__initTheme()` under `IS_CMD` and measuring the cost;
+extending `__initThemeEmpty()` with the fields node construction reads; loading a
+minimal project instead of a sample; `--server`/`--persist`, in case they take a
+different startup path.
+
 ### 11. Official packaging is a different gate from compilation
 
 A source-only `Linux Compile` succeeded without login. An official `Linux Package`/distribution attempt can fail with GameMaker permission/licensing errors such as:
