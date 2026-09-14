@@ -10,6 +10,14 @@ function window_refresh() {
 }
 
 function display_refresh() {
+	// Headless (--headless) never builds panels: __initPanel is skipped, so the
+	// menu items a rebuilt Panel_Menu reads do not exist and panel construction
+	// aborts the run. The render pass still has to be queued.
+	if(IS_CMD) {
+		run_in(10, Render);
+		return;
+	}
+	
 	window_refresh();
 	refreshPanel();
 		
