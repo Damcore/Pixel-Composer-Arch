@@ -35,6 +35,13 @@ shortcut or launcher). Setting the variable on an older build has no effect.
 The startup log must contain `UI snapshot freeze enabled`; actual use logs
 `Replaying completed UI snapshot during rendering` once per process.
 
+For a KDE menu entry, set `Exec` to launch the current build with
+`env -u PXC_UI_STATE_RESET PXC_UI_FREEZE=1` and set `Path` to the directory
+containing its matching `runner` and `assets/`. After rebuilding, update the
+installed `assets/game.unx` too: changing only the shortcut cannot enable the
+workaround in an older binary. On 2026-09-24, the local menu shortcut lacked
+the variable and still pointed to a build from before the snapshot change.
+
 The main menus/panels and preview retain their last completed image during node
 rendering, then update when rendering finishes. This eliminated the reported
 flicker in the user's project. UI controls drawn in that image temporarily stop
