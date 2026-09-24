@@ -14,9 +14,14 @@ The Linux VM path is now **validated end to end** with GameMaker Runtime `2026.1
 - 16-bit PNG -> 8-bit PNG and WebP -> PNG proxy conversions are covered by CI.
 - The startup smoke test runs for 45 seconds and fails closed on GameMaker runtime errors or unresolved Lua symbols.
 
-Latest green evidence: GitHub Actions run `34648573802` on commit `1a6f1db4a2aa4ce53f08c132c08fa7bfe8ca70c7`.
+Latest green evidence: GitHub Actions run `36004994263` on commit `a0f5e03e76094d1c94b3b443155b6380ab4b8da8`.
 
 On 2026-09-12, a real Arch/CachyOS + KDE Plasma 6 Wayland/XWayland test confirmed that the opt-in UI snapshot workaround below removes menu/panel flicker during frame changes and animation. Broader native desktop QA remains open; the Ubuntu VM/runtime result does not prove every compositor integration.
+
+The `arch-linux` source was updated to upstream commit `b69eca2322` on
+2026-09-24. Its application version is `1.21.10.203`. The real-desktop flicker
+confirmation below applies to the earlier snapshot-enabled build; the new
+version has passed the Linux CI gate but still needs an interactive check.
 
 ## Flickering menus during animation: confirmed workaround
 
@@ -41,6 +46,8 @@ containing its matching `runner` and `assets/`. After rebuilding, update the
 installed `assets/game.unx` too: changing only the shortcut cannot enable the
 workaround in an older binary. On 2026-09-24, the local menu shortcut lacked
 the variable and still pointed to a build from before the snapshot change.
+After replacing that build and updating the shortcut, the user confirmed that
+animation and frame changes no longer flickered.
 
 The main menus/panels and preview retain their last completed image during node
 rendering, then update when rendering finishes. This eliminated the reported
@@ -184,8 +191,8 @@ replace the interaction checks below.
 
 On a real Arch desktop, test at minimum:
 
-1. native Wayland launch;
-2. XWayland/X11 comparison if Wayland has issues;
+1. launch in a Wayland session through the runner's X11/XWayland path;
+2. compare with an X11 session if windowing or rendering has issues;
 3. open/save dialogs and paths containing spaces;
 4. drag/drop if available;
 5. normal PNG import plus 16-bit PNG and WebP import;

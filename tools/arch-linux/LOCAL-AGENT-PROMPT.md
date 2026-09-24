@@ -12,7 +12,7 @@ Already proven on Ubuntu 24.04 with GameMaker Runtime `2026.100.0.1098`:
 - 16-bit PNG -> 8-bit PNG and WebP -> PNG proxy conversion works;
 - unresolved Apollo/Lua symbols are fail-closed in CI.
 
-Latest green CI evidence: run `34648573802`, commit `1a6f1db4a2aa4ce53f08c132c08fa7bfe8ca70c7`.
+Latest green CI evidence: run `36004994263`, commit `a0f5e03e76094d1c94b3b443155b6380ab4b8da8`.
 
 Important expected behaviour:
 - The public repo does not contain the proprietary Apollo implementation.
@@ -26,7 +26,7 @@ Important expected behaviour:
 Tasks:
 1. Pull the latest `arch-linux` and record Arch/CachyOS version, desktop, Wayland/X11, GPU/driver and exact GameMaker version if used.
 2. Run `tools/arch-linux/preflight.sh`.
-3. Launch Pixel Composer on the real desktop. Prefer native Wayland first; compare XWayland/X11 if anything is broken.
+3. Launch Pixel Composer on the real desktop in the Wayland session through XWayland. Compare with an X11 session if anything is broken; `SDL_VIDEODRIVER=wayland` did not make this runner native Wayland in the documented test.
 4. Verify startup reaches the editor without runtime errors.
 5. Test open/save dialogs, including a path containing spaces.
 6. Test image import with a normal PNG, a 16-bit PNG and a WebP file.
@@ -39,7 +39,7 @@ Tasks:
 
 If a test fails:
 - capture the first causal runtime error and the exact reproduction;
-- compare Wayland with XWayland/X11 before changing rendering/window code;
+- compare XWayland in a Wayland session with an X11 session before changing rendering/window code;
 - make only the smallest Linux-gated fix;
 - rerun the affected test and the existing `Arch Linux build probe` workflow;
 - commit to `arch-linux` only.
@@ -47,8 +47,8 @@ If a test fails:
 Report back with only:
 - environment;
 - native Arch launch result;
-- Wayland result;
-- XWayland/X11 result;
+- Wayland-session/XWayland result;
+- X11-session comparison if tested;
 - file dialog/import/export/restart/save results;
 - first causal error if blocked;
 - commits made;

@@ -392,6 +392,6 @@ X11 driver inside Wayland still uses XWayland.
 4. Compare the same build with both switches unset when investigating causality.
    Preserve Windows behaviour and do not claim universal GPU/compositor coverage.
 
-Once the one-command sandbox gate is green, do not continue inventing Linux source fixes. Move to the real desktop checks in [`tools/arch-linux/LOCAL-AGENT-PROMPT.md`](../tools/arch-linux/LOCAL-AGENT-PROMPT.md): Wayland first, XWayland/X11 comparison if needed, file dialogs, normal/16-bit/WebP image import, PNG/export helpers, preferences/restart and save/reopen.
+Once the one-command sandbox gate is green, move to the real desktop checks in [`tools/arch-linux/LOCAL-AGENT-PROMPT.md`](../tools/arch-linux/LOCAL-AGENT-PROMPT.md): launch through XWayland in a Wayland session, compare with an X11 session if needed, then check file dialogs, normal/16-bit/WebP image import, PNG/export helpers, preferences/restart and save/reopen.
 
 If native Arch fails, capture the first causal error and compare with the already-green Ubuntu/Xvfb baseline before changing application code.
