@@ -1,5 +1,45 @@
 [
   {
+    "version": "1.22.10.202",
+    "changes": [
+      {
+        "date": "2026-09-22T07:01:24.939Z",
+        "node": "Draw Line",
+        "commit": "**Draw Line**: Fix loop path not connect properly."
+      },
+      {
+        "date": "2026-09-22T08:12:06.871Z",
+        "node": "",
+        "commit": "--line "
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.101",
+    "changes": [
+      {
+        "date": "2026-09-17T02:47:59.242Z",
+        "node": "Path Weight Adjust] Add override mode. - [Path Weight Adjust",
+        "commit": "**Path Weight Adjust] Add override mode. - [Path Weight Adjust**: Add Direction type."
+      },
+      {
+        "date": "2026-09-17T04:31:44.222Z",
+        "node": "Path Spiral",
+        "commit": "**Path Spiral**: Add more weight control.."
+      },
+      {
+        "date": "2026-09-17T05:25:26.731Z",
+        "node": "Draw Line",
+        "commit": "**Draw Line**: Add segment pos-processing options."
+      },
+      {
+        "date": "2026-09-17T06:11:48.945Z",
+        "node": "Repeat",
+        "commit": "**Repeat**: Add animation settings."
+      }
+    ]
+  },
+  {
     "version": "1.21.9.206",
     "changes": [
       {

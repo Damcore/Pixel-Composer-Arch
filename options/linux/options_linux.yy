@@ -5,7 +5,7 @@
   "option_linux_allow_fullscreen":false,
   "option_linux_disable_sandbox":true,
   "option_linux_display_cursor":true,
-  "option_linux_display_name":"Pixel Composer 1.21.9.210",
+  "option_linux_display_name":"Pixel Composer 1.21.10.203",
   "option_linux_display_splash":false,
   "option_linux_enable_steam":false,
   "option_linux_homepage":"",
@@ -20,7 +20,7 @@
   "option_linux_start_fullscreen":false,
   "option_linux_sync":false,
   "option_linux_texture_page":"8192x8192",
-  "option_linux_version":"1.21.9.210",
+  "option_linux_version":"1.21.10.203",
   "resourceType":"GMLinuxOptions",
   "resourceVersion":"2.0",
 }

@@ -65,18 +65,17 @@
             registerFunction("", "Import Project .zip",  "", n, __IMPORT_ZIP    ).setMenuAlt( "Compressed Archive (zip)", "import_zip"  )
             registerFunction("", "Export Project .zip",  "", n, __EXPORT_ZIP    ).setMenuAlt( "Compressed Archive (zip)", "export_zip"  )
             registerFunction("", "Export Project .json", "", n, __EXPORT_JSON   ).setMenuAlt( "JSON Struct (json)",       "export_json" )
-            registerFunction("", "Export Project Folder","", n, __EXPORT_FOLDER ).setMenuAlt( "Folder", "export_folder" )
+            if(TESTING) registerFunction("", "Export Showcase Package","", n, __EXPORT_SHOWCASE ).setMenuAlt( "Folder", "export_folder" )
             
             registerFunction("", "Import",          "",     n, function(_dat) /*=>*/ {return submenuCall(_dat, [ MENU_ITEMS.import_zip ])} ).setMenu("import_menu",, true);
             registerFunction("", "Export",          "",     n, function(_dat) /*=>*/ {return submenuCall(_dat, [ 
                 MENU_ITEMS.export_zip,
                 MENU_ITEMS.export_json,
-                MENU_ITEMS.export_folder,
             ])} ).setMenu("export_menu",, true);
         }
         
-        registerFunction("", "Undo",                "Z",    c,   UNDO     ).setMenu("undo" )
-        registerFunction("", "Redo",                "Z",    c|s, REDO     ).setMenu("redo" )
+        registerFunction("", "Undo",                "Z",    c,   UNDO     ).setMenu("undo", THEME.undo )
+        registerFunction("", "Redo",                "Z",    c|s, REDO     ).setMenu("redo", THEME.redo )
         
         registerFunction("", "Full Panel",          vk_f9,  n,   set_focus_fullscreen     ).setMenu("full_panel"      )
         registerFunction("", "Reset Layout",        vk_f10, c,   refreshPanel             ).setMenu("reset_layout"    )
@@ -356,6 +355,8 @@ function Panel_Menu() : PanelContent() constructor {
             ])}),
             
             -1, 
+            MENU_ITEMS.toolbar_panel,
+            MENU_ITEMS.dialog_manager_panel,
             MENU_ITEMS.steam_workshop_panel,
         ]];
         
@@ -374,7 +375,7 @@ function Panel_Menu() : PanelContent() constructor {
             menuItem(__txt("panel_menu_connect_patreon", "Connect to Patreon"),               function() /*=>*/ {return dialogCall(o_dialog_patreon)},         THEME.patreon),
             menuItem(__txt("panel_menu_connect_patreon", "Connect to Patreon (legacy)"),      function() /*=>*/ {return dialogPanelCall(new Panel_Patreon())}, THEME.patreon),
             -1,
-            menuItem(__txt("System Info..."),       function() /*=>*/ {return dialogPanelCall(new Panel_System_Info())}),
+            menuItem(__txt("System Info") + "...",  function() /*=>*/ {return dialogPanelCall(new Panel_System_Info())}),
             menuItem(__txt("About Pixel Composer"), function() /*=>*/ {return dialogCall(o_dialog_about)}),
         ]];
         
@@ -653,14 +654,17 @@ function Panel_Menu() : PanelContent() constructor {
             var ny00 = ny0 - nh / 2;
             
             if(RENDERING != undefined) {
-                var nw = hori? ui(104) : w - ui(16);
+            	draw_set_font(font);
+            	
+            	var txt = __txt("Rendering") + "...";
+                var nw  = hori? nh + string_width(txt) + ui(8) : w - ui(16);
                 
-                if(!MAC) draw_sprite_stretched_ext(THEME.panel_menu_widget, 1, nx0, ny00, nw, nh);
+                if(!MAC) draw_sprite_stretched_add(THEME.panel_menu_widget, 1, nx0, ny00, nw, nh, COLORS._main_value_positive, .5);
                 
                 draw_sprite_ui(THEME.loading_s, 0, nx0 + nh/2, ny0, .65, .65, current_time / 2, COLORS._main_icon, .8);
                 
                 draw_set_text(font, fa_left, fa_center, COLORS._main_value_positive);
-                draw_text_add(nx0 + nh, ny0, __txt("Rendering") + "...");
+                draw_text_add(nx0 + nh, ny0, txt);
                 
             } else {
                 var warning_amo = ds_list_size(WARNING);
@@ -770,6 +774,8 @@ function Panel_Menu() : PanelContent() constructor {
             var bspr = THEME.button_hide_fill;
             
             if(_action) {
+            	var bs = min(1, bh / 36);
+            	
                 for( var i = 0, n = array_length(action_buttons); i < n; i++ ) {
                     var action = action_buttons[i];
                     if(MAC && action == WINDOW_ACTION.Fullscreen) continue;
@@ -781,7 +787,7 @@ function Panel_Menu() : PanelContent() constructor {
                         case WINDOW_ACTION.Exit:
                         	var bp = THEME.window_exit_icon;
                         	var bc = COLORS._main_accent;
-                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, 0, bc);
+                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, 0, bc, 1, bs);
                             if(b) _draggable = false;
                             if(b == 2) {
                             	if(panel.dialog) instance_destroy(panel.dialog);
@@ -795,7 +801,7 @@ function Panel_Menu() : PanelContent() constructor {
                             
                             var bp = THEME.window_maximize_icon;
                             var bc = [ COLORS._main_icon, CDEF.lime ];
-                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, win_max, bc);
+                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, win_max, bc, 1, bs);
                             if(b) _draggable = false;
                             if(b == 2) {
                             	switch(OS) {
@@ -826,7 +832,7 @@ function Panel_Menu() : PanelContent() constructor {
                         case WINDOW_ACTION.Minimize:
                         	var bp = THEME.window_minimize_icon;
                             var bc = [ COLORS._main_icon, CDEF.yellow ];
-                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, 0, bc);
+                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, 0, bc, 1, bs);
                             if(b) _draggable = false;
                             if(b == 2) winMan_Minimize();
                             break;
@@ -835,7 +841,7 @@ function Panel_Menu() : PanelContent() constructor {
                             var win_full = window_is_fullscreen;
                             var bp = THEME.window_fullscreen_icon;
                             var bc = [ COLORS._main_icon, CDEF.cyan ];
-                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, win_full, bc);
+                            var b  = buttonInstant(bspr, bx, by, bw, bh, m, pHOVER, true, "", bp, win_full, bc, 1, bs);
                             if(b) _draggable = false;
                             if(b == 2) {
                                 if(OS == os_windows)
@@ -880,9 +886,9 @@ function Panel_Menu() : PanelContent() constructor {
             
             if(profile) {
                 if(hori) {
-                    var _sts = h - uPad * 2;
+                    var _sts = max(ceil(h * .75), h - uPad * 2);
                     var _stx = x1 - _sts;
-                    var _sty = uPad;
+                    var _sty = (h - _sts) / 2;
                     
                 } else {
                     var _sts = ui(24);
@@ -900,17 +906,25 @@ function Panel_Menu() : PanelContent() constructor {
                 var _hv = pHOVER && point_in_rectangle(mx, my, _stx, _sty, _stx + _sts, _sty + _sts);
                 
                 if(STEAM_AVATAR > 0 && sprite_exists(STEAM_AVATAR)) {
-                    draw_sprite_stretched(STEAM_AVATAR, 0, _stx, _sty, _sts, _sts);
+                    var _spr = STEAM_AVATAR;
+                    var _sw  = sprite_get_width(_spr);
+                    var _sh  = sprite_get_height(_spr);
+                    var _ss  = _sts / max(_sw, _sh);
+                    
+                    draw_sprite_ext(STEAM_AVATAR, 0, _stx + _sts/2 - _sw*_ss/2, _sty + _sts/2 - _sw*_ss/2, _ss, _ss);
                     
                 } else {
                     draw_sprite_stretched_ext(THEME.box_r2, 0, _stx, _sty, _sts, _sts, COLORS._main_icon_dark);
-                    draw_sprite_ui(THEME.steam_creator, 0, _stx + _sts / 2, _sty + _sts / 2, 1, 1, 0, COLORS._main_icon, .5);
+                    
+                    var _spr = THEME.steam_creator;
+                    var _ss  = _sts / sprite_get_width(_spr) * .7;
+                    draw_sprite_ext(_spr, 0, _stx + _sts/2, _sty + _sts/2, _ss, _ss, 0, COLORS._main_icon, .5);
                 }
                 
                 draw_sprite_stretched_add(THEME.box_r2, 1, _stx, _sty, _sts, _sts, c_white, .35 + _hv * .25);
+                	
                 if(_hv) {
                 	_draggable = false;
-                	
                     if(ACCOUNT_ID == undefined) {
                         setTOOLTIP(__txt("Online Accounts"));
                         

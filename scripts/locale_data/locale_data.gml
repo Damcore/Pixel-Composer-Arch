@@ -6,11 +6,11 @@
 	globalvar LOCALE_NOTE_DATA; LOCALE_NOTE_DATA = {};
 	globalvar LOCALE_NOTE_JUNC; LOCALE_NOTE_JUNC = {};
 	
-	global.missing_locale     = {}
-	global.missing_lfile      = "";
-	
 	globalvar LOCALE_CACHE; LOCALE_CACHE = {};
 	globalvar __txt; __txt        = undefined;
+	
+	global.missing_locale     = {}
+	global.missing_lfile      = "";
 	
 	function useDefaultLocale(_def) {
 		LOCALE_DEF = _def;
@@ -27,16 +27,18 @@ function __locale_file(file) {
 	return filename_combine(dirr, file);
 }
 
-function __initLocale() {
+function __initLocale(_force = false) {
 	var root  = $"{DIRECTORY}Locale";
 	global.missing_lfile = $"{root}/missing.json";
 	
 	directory_verify(root);
-	if(check_version($"{root}/version"))
+	if(_force || check_version($"{root}/version"))
 		zip_unzip($"{working_directory}pack/locale.zip", root);
 	
-	if(!LOCALE_DEF || TEST_LOCALE) loadLocale();
-	loadLocaleNotes();
+	try {
+		if(!LOCALE_DEF || TEST_LOCALE) loadLocale();
+		loadLocaleNotes();
+	} catch(e) { if(!_force) __initLocale(true); }
 }
 
 function loadLocaleNotes() {
@@ -84,6 +86,13 @@ function __txta(txt) {
 	var _txt = __txt(txt);
 	for(var i = 1; i < argument_count; i++)
 		_txt = string_replace_all(_txt, "{" + string(i) + "}", string(argument[i]));
+	return _txt;
+}
+
+function __txtas(txt, def = txt) {
+	var _txt = __txt(txt, def);
+	for(var i = 2; i < argument_count; i++)
+		_txt = string_replace_all(_txt, "{" + string(i-1) + "}", string(argument[i]));
 	return _txt;
 }
 

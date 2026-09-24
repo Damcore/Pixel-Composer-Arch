@@ -44,9 +44,11 @@ function buttonColor(_onModify, dialog = noone) : widget() constructor {
 		if(parentDialog == noone) return;
 		
 		if(is(parentDialog, PanelContent)) {
-			if(parentDialog.panel) parentDialog.panel.addChildren(dialog);
+			var _dia = parentDialog.panel? parentDialog.panel.dialog : noone;
+			if(_dia && instance_exists(_dia)) 
+				_dia.addChildren(dialog);
 			
-		} else
+		} else if(instance_exists(parentDialog))
 			parentDialog.addChildren(dialog);
 	}
 	
@@ -141,7 +143,7 @@ function buttonColor(_onModify, dialog = noone) : widget() constructor {
 							var _cc = color_from_rgb(_hx);
 							if(_cc >= 0) onModify(_cc);
 						} else
-							clipboard_set_text(color_get_hex(current_color));
+							clipboard_set_text(colorToHex(current_color));
 					}
 					
 					if(mouse_lclick(iactive))
@@ -151,7 +153,7 @@ function buttonColor(_onModify, dialog = noone) : widget() constructor {
 				var _scis = gpu_get_scissor();
 				draw_set_text(f_p1, fa_right, fa_center, COLORS._main_text_sub);
 				gpu_set_scissor(_bx, _by, _bw, _bh);
-				draw_text_add(_bcx - ui(4), _y + _h / 2 + ui(1), color_get_hex(current_color));
+				draw_text_add(_bcx - ui(4), _y + _h / 2 + ui(1), colorToHex(current_color));
 				gpu_set_scissor(_scis);
 				
 				var _spr = interactable && key_mod_press(SHIFT)? THEME.paste_20 : THEME.copy_20;

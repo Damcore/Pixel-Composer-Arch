@@ -1,6 +1,8 @@
 /// @description init
 event_inherited();
 
+// print("Init command Palette");
+
 #region init functions
 	if(!PREFERENCE_FUNCTION_INIT) {
 		PREFERENCE_FUNCTION_INIT = true;
@@ -23,8 +25,12 @@ event_inherited();
 	
 	setFocus(self.id);
 	
-	data = array_clone(RECENT_COMMANDS, 1);
 	keys = variable_struct_get_names(FUNCTIONS);
+	data = [];
+	for( var i = 0, n = array_length(RECENT_COMMANDS); i < n; i++ ) {
+		var cmd = RECENT_COMMANDS[i];
+		if(is_struct(FUNCTIONS[$ cmd])) array_push(data, FUNCTIONS[$ cmd]);
+	}
 	
 	dialog_w = ui(480);
 	var hght = line_get_height(f_p2, item_pad);
@@ -49,7 +55,12 @@ event_inherited();
 		var hght = line_get_height(f_p2, item_pad);
 		
 		if(search_string == "") { 
-			data = array_clone(RECENT_COMMANDS, 1); 
+			data = [];
+			for( var i = 0, n = array_length(RECENT_COMMANDS); i < n; i++ ) {
+				var cmd = RECENT_COMMANDS[i];
+				if(is_struct(FUNCTIONS[$ cmd])) array_push(data, FUNCTIONS[$ cmd]);
+			}
+			
 			dialog_h = min(ui(32) + max(1, array_length(data)) * hght, ui(400))
 			return; 
 		}
@@ -115,7 +126,7 @@ event_inherited();
 	}
 #endregion
 
-sc_content = new scrollPane(dialog_w - ui(4), dialog_h - ui(32), function(_y, _m) {
+sc_content = new scrollPane(0, 0, function(_y, _m) {
 	draw_clear_alpha(COLORS.panel_bg_clear, 1);
 	
 	var hght = line_get_height(f_p3, item_pad);
@@ -129,11 +140,8 @@ sc_content = new scrollPane(dialog_w - ui(4), dialog_h - ui(32), function(_y, _m
 	var mouse_move = _prex != mouse_mx || _prey != mouse_my;
 	if(mouse_move) keyboard_trigger = false;
 	
-	for(var i = 0; i < array_length(data); i++) {
-		if(_ly < -hght) {
-			_ly += hght;
-			continue;
-		}
+	for(var i = 0, n = array_length(data); i < n; i++) {
+		if(_ly < -hght) { _ly += hght; continue; }
 		
 		var _menu = data[i];
 		
@@ -142,7 +150,7 @@ sc_content = new scrollPane(dialog_w - ui(4), dialog_h - ui(32), function(_y, _m
 		var _mhover   = mouse_move && point_in_rectangle(_m[0], _m[1], 0, _ly, _dw, _ly + hght - 1); 
 		
 		if(selecting == i) {
-			draw_sprite_stretched_ext(THEME.textbox, 3, 0, _ly, _dw, hght, COLORS.dialog_menubox_highlight, 1);
+			draw_sprite_stretched_add(THEME.menubox, 0, 0, _ly, _dw, hght, COLORS.dialog_menubox_highlight, .1);
 			
 			if(sc_content.active) {
 				if((!keyboard_trigger && mouse_lpress()) || (hk_editing == noone && KEYBOARD_ENTER)) {
@@ -150,7 +158,9 @@ sc_content = new scrollPane(dialog_w - ui(4), dialog_h - ui(32), function(_y, _m
 					     _menu.action(_menu.node);
 					else _menu.action();
 					
-					array_push(RECENT_COMMANDS, _menu);
+					array_remove( RECENT_COMMANDS, _menu.fnName );
+					array_push(   RECENT_COMMANDS, _menu.fnName );
+					PREF_SAVE();
 					instance_destroy();
 				}
 				
@@ -283,3 +293,5 @@ sc_content = new scrollPane(dialog_w - ui(4), dialog_h - ui(32), function(_y, _m
 
 	return _h;
 });
+
+// print("Init command Palette complete");

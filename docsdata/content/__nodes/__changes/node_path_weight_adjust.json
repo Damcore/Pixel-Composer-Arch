@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.21.10.101",
+    "changes": [
+      {
+        "date": "2026-09-17T02:47:59.243Z",
+        "node": "",
+        "commit": "**Path Weight Adjust] Add override mode. - [Path Weight Adjust**: Add Direction type."
+      },
+      {
+        "date": "2026-09-17T04:31:44.223Z",
+        "node": "",
+        "commit": "**Path Spiral**: Add more weight control.."
+      }
+    ]
+  },
+  {
     "version": "1.21.8.005",
     "changes": [
       {

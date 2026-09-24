@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.22.10.202",
+    "changes": [
+      {
+        "date": "2026-09-22T06:02:28.760Z",
+        "node": "",
+        "commit": "**Warp**: Fix error popup when no surface connected."
+      },
+      {
+        "date": "2026-09-22T06:03:24.737Z",
+        "node": "",
+        "commit": ""
+      },
+      {
+        "date": "2026-09-22T06:03:29.536Z",
+        "node": "Warp",
+        "commit": "**Warp**: Fix error popup when no surface connected."
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.002",
+    "changes": [
+      {
+        "date": "2026-09-15T08:07:39.764Z",
+        "node": "",
+        "commit": "**Wrap**: Area now relative to original surface, not output surface."
+      }
+    ]
+  },
+  {
     "version": "1.21.9.207",
     "changes": [
       {

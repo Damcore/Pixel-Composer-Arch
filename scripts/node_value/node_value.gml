@@ -5,6 +5,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		active = true;
 		from   = noone;
 		name   = _name;
+		dname  = _name;
 		node   = _node;
 		tags   = VALUE_TAG.none; static setTags = function(t) /*=>*/ { tags = t; return self; }
 		
@@ -502,7 +503,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 	
 	static hasInstance = function() { return connect_type == CONNECT_TYPE.input && node.instanceBase;               } 
 	static useInstance = function() { return hasInstance() && value_from == noone && !attributes.override_instance; } 
-	static getInstance = function() { return node.instanceBase.inputs[index]; } 
+	static getInstance = function() { return connect_type == CONNECT_TYPE.input? node.instanceBase.getInputIndex(index, tags) : node.instanceBase.getOutputIndex(index, tags); } 
 	
 	////- NAME
 	
@@ -584,9 +585,9 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		node.triggerRender();
 	}
 	
-	static setUnitSimple = function(r = true) { 
+	static setUnitSimple = function(r = true, _unitRef = undefined) { 
 		var _mode = r? VALUE_UNIT.reference : VALUE_UNIT.constant;
-		var _ref  = function(i) /*=>*/ {return node.getDimension(i)};
+		var _ref  = _unitRef ?? function(i) /*=>*/ {return node.getDimension(i)};
 		
 		unitUse = true;
 		display_data.onSurfaceSize = _ref;
@@ -2694,7 +2695,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 				draw_clear(_raw);
 				
 				if(colorBrightness(_raw) > .8) _tc = COLORS._main_icon_dark;
-				_txt = $"#{color_get_hex(_raw)}";
+				_txt = $"#{colorToHex(_raw)}";
 				break;
 			
 			case VALUE_TYPE.gradient:	
@@ -3212,38 +3213,18 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		
 		// if(log) log_warning("LOAD", $"    [Connect] Connecting {node.name} to {_nd.name}", node);
 		
-		switch(con_tag) {
-			case VALUE_TAG.updateInTrigger  : return setFrom(_nd.updatedInTrigger);
-			case VALUE_TAG.updateOutTrigger : return setFrom(_nd.updatedOutTrigger);
-			case VALUE_TAG.matadata         : return setFrom(_nd.junc_meta[con_index]);
-		}
-		
-		if(con_index >= 0 && con_index < _ol) {
-			var _set = setFrom(_nd.outputs[con_index], false, true, log);
-			if(_set) return true;
-			
-				 if(_set == -1) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Not connectable.",        node);
-			else if(_set == -2) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Condition not met.",      node); 
-			else                log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : General failure {_set}.", node);
-			
-			return false;
-		} 
-		
-		if(con_index >= 1000) { // connect bypass
-			var _inp = array_safe_get_fast(_nd.inputs, con_index - 1000, noone);
-			if(_inp == noone) return false;
-			
-			var _set = setFrom(_inp.getBypassJunc(), false, true, log);
-			if(_set) return true;
-			
-				 if(_set == -1) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} (bypass) : Not connectable.",        node);
-			else if(_set == -2) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} (bypass) : Condition not met.",      node);  
-			else                log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} (bypass) : General failure {_set}.", node);
-			
+		var _from = _nd.getOutputIndex(con_index, con_tag);
+		if(_from == noone) {
+			log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Output not exist [{con_index}].", node);
 			return false;
 		}
 		
-		log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Output not exist [{con_index}].", node);
+		var _set = setFrom(_from, false, true, log);
+		if(_set) return true;
+		
+			 if(_set == -1) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Not connectable.",        node);
+		else if(_set == -2) log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : Condition not met.",      node); 
+		else                log_warning("LOAD", $"[Connect] Connection conflict {node.name} to {_nd.name} : General failure {_set}.", node);
 		
 		return false;
 	}
@@ -3679,23 +3660,23 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		
 		switch(PROJECT.graphConnection.type) { 
 			case 0 : 
-				if(down)	draw_line_width_color(jx, jy, frx, fry, th, c0, c1);
-				else    	draw_line_connect(frx, fry, jx, jy, ss, th, c0, c1, drawParam);
+				if(down) draw_line_width_color(jx, jy, frx, fry, th, c0, c1);
+				else     draw_line_connect(frx, fry, jx, jy, ss, th, c0, c1, drawParam);
 				break;
 				
 			case 1 : 
-				if(down)	draw_line_curve_corner(frx, fry, jx, jy, ss, th, c0, c1); 
-				else		draw_line_curve_color(jx, jy, frx, fry, cx, cy, ss, th, c0, c1, ty); 
+				if(down) draw_line_curve_corner(frx, fry, jx, jy, ss, th, c0, c1); 
+				else     draw_line_curve_color(jx, jy, frx, fry, cx, cy, ss, th, c0, c1, ty); 
 				break;
 				
 			case 2 : 
-				if(down)	draw_line_elbow_corner(frx, fry, jx, jy, ss, th, c0, c1, drawParam); 
-				else		draw_line_elbow_color(frx, fry, jx, jy, cx, cy, ss, th, c0, c1, drawParam); 
+				if(down) draw_line_elbow_corner(frx, fry, jx, jy, ss, th, c0, c1, drawParam); 
+				else     draw_line_elbow_color(frx, fry, jx, jy, cx, cy, ss, th, c0, c1, drawParam); 
 				break;
 				
 			case 3 : 
-				if(down)	draw_line_elbow_diag_corner(frx, fry, jx, jy, ss, th, c0, c1, drawParam); 
-				else		draw_line_elbow_diag_color(frx, fry, jx, jy, cx, cy, ss, th, c0, c1, drawParam); 
+				if(down) draw_line_elbow_diag_corner(frx, fry, jx, jy, ss, th, c0, c1, drawParam); 
+				else     draw_line_elbow_diag_color(frx, fry, jx, jy, cx, cy, ss, th, c0, c1, drawParam); 
 				break;
 		} 
 	}

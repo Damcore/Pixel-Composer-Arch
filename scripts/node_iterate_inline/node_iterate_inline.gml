@@ -18,33 +18,60 @@ function Node_Iterate_Inline(_x, _y, _group = noone) : Node_Collection_Inline(_x
 	
 	input_node  = noone;
 	output_node = noone;
+
+	if(NODE_NEW_MANUAL) {
+		input_node  = nodeBuild("Node_Iterate_Inline_Input",  x - 128, y, _group);
+		output_node = nodeBuild("Node_Iterate_Inline_Output", x + 128, y, _group);
+		output_node.inputs[0].setFrom(input_node.outputs[0]);
+			
+		input_node.loop  = self;
+		output_node.loop = self;
+		
+		addNode(input_node);
+		addNode(output_node);
+	}
 	
 	iteration_count = 0;
 	iterated        = 0;
 	
 	////- Rendering
 	
+	static isActiveDynamic = function(frame = CURRENT_FRAME) {
+		if(update_on_frame) return true;
+		if(!rendered)       return true;
+		if(instanceBase)    return true;
+		
+		force_requeue = false;
+		__temp_frame  = frame;
+		if(array_any(inputs, function(inp,i) /*=>*/ {return inp.isActiveDynamic(__temp_frame)}))
+			return true;
+		
+		var _active = false;
+        if(animation_range_start != infinity && animation_range_start != animation_range_end)
+        	_active |= frame >= animation_range_start && frame <= animation_range_end;
+        
+        for( var i = 0, n = array_length(nodes); i < n; i++ ) 
+        	_active |= nodes[i].isActiveDynamic(frame);
+        
+        return _active;
+	}
+	
 	static connectJunctions = function(jFrom, jTo) {
 		var nfrom = jFrom.node;
 		var nto   = jTo.node;
 		
-		var input  = nodeBuild("Node_Iterate_Inline_Input",  nfrom.x - 32 - 96,  nfrom.y);
-		var output = nodeBuild("Node_Iterate_Inline_Output", nto.x + nto.w + 32, nto.y);
+		input_node.x  = nfrom.x - 32 - 96;
+		output_node.x = nto.x + nto.w + 32;
 		
-		input.inputs[0].setFrom(jFrom.value_from);
-		jFrom.setFrom(input.outputs[0]);
-		output.inputs[0].setFrom(jTo);
+		input_node.y  = nfrom.y;
+		output_node.y = nto.y;
 		
-		addNode(input);
-		addNode(output);
+		input_node.inputs[0].setFrom(jFrom.value_from);
+		jFrom.setFrom(input_node.outputs[0]);
+		output_node.inputs[0].setFrom(jTo);
+		
 		addNode(nfrom);
 		if(nfrom != nto) addNode(nto);
-		
-		input_node  = input;
-		output_node = output;
-		
-		input_node.loop  = self;
-		output_node.loop = self;
 		
 		return self;
 	}
@@ -125,7 +152,7 @@ function Node_Iterate_Inline(_x, _y, _group = noone) : Node_Collection_Inline(_x
 		
 		var jun  = inputs[0];
 		var _hov = jun.drawConnections(params, _draw); 
-		return _hov? [_hov, undefined] : undefined;
+		return _hov;
 	}
 	
 	////- Serialize

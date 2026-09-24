@@ -10,13 +10,13 @@ event_inherited();
 	pages = [ "News", "Getting Started", "Welcome Files" ];
 	if(STEAM_ENABLED) array_push(pages, "Workshop");
 	
+	PREFERENCES.splash_page = min(PREFERENCES.splash_page, array_length(pages) - 1);
+	
 	thumbnail_retriever = 0;
 	show_autosaves		= false;
 	
-	recent_width = PREFERENCES.splash_expand_recent? ui(576) : ui(288);
-	
-	clip_surf = noone;
-	
+	recent_width    = PREFERENCES.splash_expand_recent? ui(576) : ui(288);
+	clip_surf       = noone;
 	welcome_editing = false;
 #endregion
 

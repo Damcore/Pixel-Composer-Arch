@@ -43,9 +43,13 @@ DIALOG_DRAW_BG
 				var _spr = _rec.getSpr();
 				
 				var _hov = hv && point_in_rectangle(mouse_mx, mouse_my, _rcx, _rcy, _rcx + _rcs, _rcy + _rcs);
-				var _cc  = _hov? COLORS._main_icon_light : COLORS._main_icon;
-				var _ss  = (_rcs - ui(4)) / 64;
-				draw_sprite_ext(_spr, 0, _rcx + _rcs / 2, _rcy + _rcs / 2, _ss, _ss, 0, _cc);
+				
+				if(sprite_exists(_spr)) {
+					var _cc  = _hov? COLORS._main_icon_light : COLORS._main_icon;
+					var _ss  = (_rcs - ui(4)) / sprite_get_height(_spr);
+					
+					draw_sprite_ext(_spr, 0, _rcx + _rcs / 2, _rcy + _rcs / 2, _ss, _ss, 0, _cc);
+				}
 				
 				if(_hov) {
 					setTOOLTIP(_nam);
@@ -66,7 +70,6 @@ DIALOG_DRAW_BG
 			draw_line(_content_x + 1, _content_y + ui(2), _content_x + _content_w - 2, _content_y + ui(2))
 			draw_set_alpha(1);
 			
-			
 			_content_y += ui(4);
 			_content_h -= ui(4);
 		}
@@ -75,7 +78,7 @@ DIALOG_DRAW_BG
 			var _subw = ui(128);
 			subcatagory_pane.setFocusHover(sFOCUS, sHOVER);
 			subcatagory_pane.verify(_subw, _content_h);
-			subcatagory_pane.draw(_content_x, _content_y);
+			subcatagory_pane.draw(_content_x + 1, _content_y);
 			
 			_content_w -= _subw;
 			_content_x += _subw;
@@ -213,6 +216,7 @@ if(DIALOG_SHOW_FOCUS) {
 	var dpd = THEME_VALUE.dialog_padding;
 	var cc  = node_replace == noone? COLORS._main_accent : COLORS.dialog_add_node_replace_mode;
 	draw_sprite_stretched_ext(THEME.dialog, 1, _dialog_x, _dialog_y, dialog_w, dialog_h, cc, 1);
+	drawResize();
 }
 
 #region tooltip

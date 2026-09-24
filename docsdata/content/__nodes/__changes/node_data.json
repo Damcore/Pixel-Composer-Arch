@@ -1,5 +1,60 @@
 [
   {
+    "version": "1.21.10.203",
+    "changes": [
+      {
+        "date": "2026-09-23T03:47:07.540Z",
+        "node": "",
+        "commit": "**Color Button**: Fix crash when toggling button inside dialog box."
+      }
+    ]
+  },
+  {
+    "version": "1.22.10.201",
+    "changes": [
+      {
+        "date": "2026-09-21T03:03:02.226Z",
+        "node": "",
+        "commit": "Add dialog resize corner visual (for MacOS where diagonal resize cursor not show up)."
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.102",
+    "changes": [
+      {
+        "date": "2026-09-18T00:00:40.534Z",
+        "node": "",
+        "commit": "Node connected from deactivated node now considered render leaf."
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.101",
+    "changes": [
+      {
+        "date": "2026-09-17T01:46:03.905Z",
+        "node": "",
+        "commit": "Fix crash when trying to connect meta junction from an instanced node, group."
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.002",
+    "changes": [
+      {
+        "date": "2026-09-15T07:50:19.776Z",
+        "node": "PB Draw",
+        "commit": "**PB Draw**: Fix error when loading files made before 1.20."
+      },
+      {
+        "date": "2026-09-15T08:07:39.763Z",
+        "node": "Wrap",
+        "commit": "**Wrap**: Area now relative to original surface, not output surface."
+      }
+    ]
+  },
+  {
     "version": "1.21.9.210",
     "changes": [
       {

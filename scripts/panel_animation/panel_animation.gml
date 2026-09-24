@@ -207,9 +207,6 @@ function Panel_Animation() : PanelContent() constructor {
         timeline_contents   = [];
         timeline_keys       = [];
         
-        view_context        = 0;
-        node_name_type      = 0;
-        
         do_resetView        = true;
         resetView_region    = false;
     
@@ -242,6 +239,9 @@ function Panel_Animation() : PanelContent() constructor {
     #endregion
     
     #region ++++ Menu ++++
+    	sidebar_y     = 0;
+    	sidebar_y_to  = 0;
+    	
     	global.menuItems_animation_summary = [
     		"animation_toggle_view_type",
     		-1,
@@ -261,6 +261,7 @@ function Panel_Animation() : PanelContent() constructor {
 			"animation_toggle_NodeLabel",
 			"animation_toggle_KeyframeOverride",
 			"animation_toggle_OnionSkin",
+			"animation_view_settings",
 		];
 		
     	global.menuItems_animation_sidebar_context = [
@@ -518,6 +519,8 @@ function Panel_Animation() : PanelContent() constructor {
         var _prpHv  = PANEL_INSPECTOR.prop_hover;
         var _prpAny = _prpHv == noone;
         
+        var _vCtx = PROJECT.animationDisplay.view_context;
+        
         for( var i = 0, n = array_length(folder.contents); i < n; i++ ) {
             var _cont = folder.contents[i];
             if(!_cont.active) continue;
@@ -535,14 +538,19 @@ function Panel_Animation() : PanelContent() constructor {
             
             if(is(_cont, timelineItemNode)) {
                 var _node = _cont.node;
-                if(!is_struct(_node))                                   continue;
-                if(_node.instanceBase != undefined)                     continue;
-                if(!show_hidden && _node.attributes.timeline_hide)      continue;
+                if(!is_struct(_node))                              continue;
+                if(_node.instanceBase != undefined)                continue;
+                if(!show_hidden && _node.attributes.timeline_hide) continue;
                 
-                if(view_context == 1 && !_node.isChildOf(_ctx))         continue;
-                if(view_context == 2 && _node.group != _ctx)            continue;
-                
-                if(view_context == 3 && _selAny && !_node.is_selecting) continue;
+                     if(_vCtx == 1 && !_node.isChildOf(_ctx)) continue;
+                else if(_vCtx == 2 && _node.group != _ctx)    continue;
+                else if(_vCtx == 3) {
+                	var disp = true;
+                	if(_selAny && !_node.is_selecting && PANEL_INSPECTOR.inspecting != _node) 
+                		disp = false;
+                		
+                	if(!disp) continue;
+                }
                 
                 var _anim = [];
                 var _prop = [];
@@ -590,7 +598,7 @@ function Panel_Animation() : PanelContent() constructor {
                 _context_folder[m] = _content;
                 
                 if(item_dragging == noone || item_dragging.item != _cont)
-                    getTimelineContentFolder(_cont, _context_folder, _depth + 1, _show && _cont.show || !show_nodes);
+                    getTimelineContentFolder(_cont, _context_folder, _depth + 1, _show && _cont.show || !PROJECT.animationDisplay.show_nodes);
                     
             }
             
@@ -823,7 +831,7 @@ function Panel_Animation() : PanelContent() constructor {
         	var ks  = key.dopesheet_s? THEME.timeline_keyframe : THEME.timeline_key_empty;
         	var ka  = .55 + key.dopesheet_s * .25;
         	
-        	draw_sprite_ui_uniform(ks, 0, key.dopesheet_x, ky, 1, key.color, ka);
+        	draw_sprite_ui_uniform(ks, 0, key.dopesheet_x, ky, PROJECT.animationDisplay.keyframe_draw_scale, key.color, ka);
         }
         	
         BLEND_MULTIPLY
@@ -961,9 +969,10 @@ function Panel_Animation() : PanelContent() constructor {
         if(by < bs) return;
         
         var scis = gpu_get_scissor();
+        var sidh = ui(16);
         gpu_set_scissor(bx, 0, bs + padding, max_y);
         hov = hov && point_in_rectangle(mx, my, bx, 0, w, max_y);
-        by  = padding;
+        by  = padding - sidebar_y;
         
         if(mouse_rpress(hov && foc)) menuCallGen("animation_sidebar_context");
         
@@ -974,15 +983,21 @@ function Panel_Animation() : PanelContent() constructor {
 				draw_set_color(CDEF.main_mdblack);
 				draw_line_width(bx, by + ui(3), bx + bs, by + ui(3), 2);
 				
-				by += ui(8);
+				by   += ui(8);
+				sidh += ui(8);
 				continue;
 			} 
 			
 			_menu.draw(bx, by, bs, bs, m, hov, foc, "", ui(6));
-			by += bs + ui(2);
+			by   += bs + ui(2);
+			sidh += bs + ui(2);
 		}
 		
 		gpu_set_scissor(scis);
+		
+		if(hov && MOUSE_WHEEL != 0) 
+			sidebar_y_to = clamp(sidebar_y - MOUSE_WHEEL * ui(32), 0, max(0, sidh - max_y));
+		sidebar_y = lerp_float(sidebar_y, sidebar_y_to, 5);
     }
     
     function drawAnimationControl() {
@@ -1180,9 +1195,9 @@ function Panel_Animation() : PanelContent() constructor {
     
     function newFolder() { PROJECT.timelines.addItem(new timelineItemGroup()); }
     
-    function toggleNodeNameType(_d=1) { node_name_type = (node_name_type + _d + 3) % 3; }
-    function toggleNodeLabel()        { show_nodes     = !show_nodes;                   }
-    function toggleViewContext()      { view_context   = (view_context + 1) % 4;        }
+    function toggleNodeNameType(_d=1) { PROJECT.animationDisplay.node_name_type = (PROJECT.animationDisplay.node_name_type + _d + 3) % 3; }
+    function toggleNodeLabel()        { PROJECT.animationDisplay.show_nodes     = !PROJECT.animationDisplay.show_nodes;                   }
+    function toggleViewContext()      { PROJECT.animationDisplay.view_context   = (PROJECT.animationDisplay.view_context + 1) % 4;        }
     function toggleKeyframeOverride() { PREFERENCES.panel_animation_key_override = !PREFERENCES.panel_animation_key_override; }
     function toggleOnionSkin()        { PROJECT.onion_skin.enabled = !PROJECT.onion_skin.enabled; }
 }

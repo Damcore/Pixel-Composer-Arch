@@ -1,5 +1,30 @@
 [
   {
+    "version": "1.21.10.101",
+    "changes": [
+      {
+        "date": "2026-09-17T00:15:17.367Z",
+        "node": "Fur",
+        "commit": "**Fur**: Add randomness, overlap fur control."
+      },
+      {
+        "date": "2026-09-17T00:19:13.968Z",
+        "node": "Fur",
+        "commit": "**Fur**: Color is now gradient for setting random color per fur."
+      },
+      {
+        "date": "2026-09-17T00:40:32.360Z",
+        "node": "Fur",
+        "commit": "**Fur**: Add oversample setting."
+      },
+      {
+        "date": "2026-09-17T01:46:03.905Z",
+        "node": "",
+        "commit": "Fix crash when trying to connect meta junction from an instanced node, group."
+      }
+    ]
+  },
+  {
     "version": "1.21.5.003",
     "changes": [
       {

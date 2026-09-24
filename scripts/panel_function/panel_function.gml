@@ -45,15 +45,17 @@
 
 	////- Global
 	
-function __initPanel() {
+function __initPanel(_force = false) {
 	var root = $"{DIRECTORY}layouts";
 	directory_verify(root);
 	
-	if(check_version($"{root}/version"))
+	if(_force || check_version($"{root}/version"))
 		zip_unzip($"{working_directory}pack/layouts.zip", root);
 	
-	setPanel();
-	checkPanelValid();
+	try {
+		setPanel();
+		checkPanelValid();
+	} catch(e) { if(!_force) __initPanel(true); }
 }
 
 function panelObjectInit(_w = WIN_SW, _h = WIN_SH) {
@@ -517,4 +519,7 @@ function __fnInit_Panels() {
         registerFunction("", "Steam Workshop Panel",      "", n, function() /*=>*/ {return dialogPanelCall(new Panel_Steam_Workshop())}    ).setMenuAlt("Steam Workshop", "steam_workshop_panel")
         registerFunction("", "Collection Runner Panel",   "", n, function() /*=>*/ {return dialogPanelCall(new Panel_Collection_Runner())} ).setMenuAlt("Runner",         "collection_runner_panel")
         registerFunction("", "Node Manager Panel",        "", n, function() /*=>*/ {return dialogPanelCall(new Panel_Nodes_Manager())}     ).setMenuAlt("Node Manager",   "node_manager_panel")
+        
+        registerFunction("", "Dialog Manager Panel",      "", n, function() /*=>*/ {return dialogPanelCall(new Panel_Dialog_Manager())}    ).setMenuAlt("Dialog Manager", "dialog_manager_panel")
+        registerFunction("", "Toolbar Panel",             "", n, function() /*=>*/ {return dialogPanelCall(new Panel_Toolbar())}           ).setMenuAlt("Toolbar",        "toolbar_panel")
 	}

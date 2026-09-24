@@ -38,6 +38,8 @@ function SAVE_ALL() {
 
 function SAVE(project = PROJECT) {
 	if(DEMO) return false;
+	print("Saving", project)
+	
 	if(RUN_IDE) PREF_SAVE();
 	
 	if(!is(project, Project)) project = PROJECT;
@@ -96,7 +98,6 @@ function SAVE_AT(project = PROJECT, path = "", _param = new save_param()) {
 		}
 	}
 	
-	if(file_exists_empty(path)) file_delete(path);
 	var _ext = filename_ext_raw(path);
 	
 	var _map = project.serialize(_param.save_addon, _param.readonly);
@@ -167,6 +168,8 @@ function SAVE_AT(project = PROJECT, path = "", _param = new save_param()) {
 		buffer_poke(_buf, 4, buffer_u32, _headerSize);
 		
 		buffer_copy(_raw, 0, buffer_get_size(_raw), _buf, _headerSize);
+		
+		// if(file_exists_empty(path)) file_delete(path);
 	    buffer_save(_buf, path);
 		
 		buffer_delete(_raw);
@@ -207,7 +210,8 @@ function SAVE_AUTO(_project = PROJECT) {
 
 function SAVE_COLLECTIONS(_list, _path, save_surface = true, metadata = noone, context = PANEL_GRAPH.getCurrentContext()) {
 	var _content = {};
-	_content.version = SAVE_VERSION;
+	_content.version    = SAVE_VERSION;
+	_content.versionStr = VERSION_STRING;
 	
 	var _nodes = [];
 	var cx     = 0;
@@ -280,7 +284,8 @@ function SAVE_COLLECTION(_node, _path, save_surface = true, metadata = noone, co
 	}
 	
 	var _content = {};
-	_content.version = SAVE_VERSION;
+	_content.version    = SAVE_VERSION;
+	_content.versionStr = VERSION_STRING;
 	
 	var _nodes = [];
 	SAVE_NODE(_nodes, _node, _node.x, _node.y, true, context);
@@ -294,7 +299,8 @@ function SAVE_COLLECTION(_node, _path, save_surface = true, metadata = noone, co
 		var _name  = filename_name_only(_path);
 		var _mpath = $"{_dir}/{_name}.meta";
 		
-		_meta.version = SAVE_VERSION;
+		_meta.version    = SAVE_VERSION;
+		_meta.versionStr = VERSION_STRING;
 		json_save_struct(_mpath, _meta, true);
 	}
 	
@@ -320,7 +326,8 @@ function SAVE_PXZ_COLLECTION(_node, _path, _prev_surface = noone, metadata = noo
 	}
 	
 	var _content = {};
-	_content.version = SAVE_VERSION;
+	_content.version    = SAVE_VERSION;
+	_content.versionStr = VERSION_STRING;
 	
 	var _nodes = [];
 	SAVE_NODE(_nodes, _node, _node.x, _node.y, true, context);
@@ -335,7 +342,8 @@ function SAVE_PXZ_COLLECTION(_node, _path, _prev_surface = noone, metadata = noo
 		var _name  = filename_name_only(_path);
 		_path_meta = $"{TEMPDIR}{_name}.meta";
 		
-		_meta.version = SAVE_VERSION;
+		_meta.version    = SAVE_VERSION;
+		_meta.versionStr = VERSION_STRING;
 		json_save_struct(_path_meta, _meta, true);
 	}
 	

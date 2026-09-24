@@ -17,7 +17,7 @@
     function panel_animation_duplicate()               { CALL("animation_duplicate");               PANEL_ANIMATION.doDuplicate();                                                                       }
     function panel_animation_copy()                    { CALL("animation_copy");                    PANEL_ANIMATION.doCopy();                                                                            }
     function panel_animation_paste()                   { CALL("animation_paste");     if(PANEL_ANIMATION.animator_focusing != noone) PANEL_ANIMATION.doPaste(PANEL_ANIMATION.animator_focusing.prop);          }
-    function panel_animation_show_nodes()              { CALL("animation_toggle_nodes");            PANEL_ANIMATION.show_nodes  = !PANEL_ANIMATION.show_nodes;                                           }
+    function panel_animation_show_nodes()              { CALL("animation_toggle_nodes");            PROJECT.animationDisplay.show_nodes  = !PROJECT.animationDisplay.show_nodes;                                           }
     function panel_animation_collapseToggle()          { CALL("animation_collapse_toggle");         PANEL_ANIMATION.collapseToggle();                                                                    }
     function panel_animation_show_hidden()             { CALL("animation_toggle_hidden");           PANEL_ANIMATION.show_hidden = !PANEL_ANIMATION.show_hidden;                                          }
     function panel_animation_quantize()                { CALL("animation_quantize");                PANEL_ANIMATION.doQuantize();                                                                        }
@@ -107,8 +107,8 @@
         
         registerFunction(an, "New Folder",                "", n, panel_animation_dopesheet_folder        ).setMenu("animation_new_folder",        THEME.folder     )
         registerFunction(an, "New Folder From Selection", "", n, panel_animation_dopesheet_folder_select ).setMenu("animation_new_folder_select", THEME.folder_sel )
-        registerFunction(an, "Dopesheet Expand",          "", n, panel_animation_dopesheet_expand        ).setMenu("animation_dopesheet_expand"   )
-        registerFunction(an, "Dopesheet Collapse",        "", n, panel_animation_dopesheet_collapse      ).setMenu("animation_dopesheet_collapse" )
+        registerFunction(an, "Expand All",                "", n, panel_animation_dopesheet_expand        ).setMenu("animation_dopesheet_expand"   )
+        registerFunction(an, "Collapse All",              "", n, panel_animation_dopesheet_collapse      ).setMenu("animation_dopesheet_collapse" )
         
         registerFunction(an, "Move Keys",            "G", n, panel_animation_keys_move            ).setMenu("animation_keys_move"       )
         registerFunction(an, "Scale Keys",           "S", n, panel_animation_keys_scale           ).setMenu("animation_keys_scale"      )
@@ -120,12 +120,14 @@
         registerFunction(an, "Create Region",        "",  n, panel_animation_region_create        ).setMenu("animation_region_create"   )
         registerFunction(an, "Remove All Regions",   "",  n, panel_animation_region_clear         ).setMenu("animation_region_clear"   )
         
+        registerFunction(an, "View Settings...",     "",  n, function() /*=>*/ {return dialogPanelCall(new Panel_Animation_View_Setting())}).setMenu("animation_view_settings", THEME.icon_visible_setting)
+        
         registerFunction(an, "Toggle Hidden",      "S", s,  panel_animation_show_hidden    )
         	.setMenu("animation_toggle_hidden", THEME.timeline_hide_24).setSpriteInd(function() /*=>*/ {return PANEL_ANIMATION.show_hidden} )
         	.setColorFn(function() /*=>*/ {return PANEL_ANIMATION.show_hidden? COLORS._main_icon : COLORS._main_accent} )
         
         registerFunction(an, "Node Name Display", "", n, panel_animation_toggle_NodeNameType    )
-        	.setMenu("animation_toggle_NodeNameType",     THEME.node_name_type    ).setSpriteInd(function() /*=>*/ {return PANEL_ANIMATION.node_name_type} )
+        	.setMenu("animation_toggle_NodeNameType",     THEME.node_name_type    ).setSpriteInd(function() /*=>*/ {return PROJECT.animationDisplay.node_name_type} )
         	.setTooltip(new tooltipSelector("Name Display", [
 	            __txt("panel_animation_name_full", "Full name"),
 	            __txt("panel_animation_name_type", "Node type"),
@@ -133,10 +135,10 @@
 	        ])).setScroll()
 	        
         registerFunction(an, "Show Node Name",    "", n, panel_animation_toggle_NodeLabel       )
-        	.setMenu("animation_toggle_NodeLabel",        THEME.visible           ).setSpriteInd(function() /*=>*/ {return PANEL_ANIMATION.show_nodes}     )
+        	.setMenu("animation_toggle_NodeLabel",        THEME.visible           ).setSpriteInd(function() /*=>*/ {return PROJECT.animationDisplay.show_nodes}     )
         	
         registerFunction(an, "Toggle View Context", "", n, panel_animation_toggle_ViewContext   )
-        	.setMenu("animation_toggle_ViewContext",      THEME.animation_context_global ).setSpriteInd(function() /*=>*/ {return PANEL_ANIMATION.view_context}  )
+        	.setMenu("animation_toggle_ViewContext",      THEME.animation_context_global ).setSpriteInd(function() /*=>*/ {return PROJECT.animationDisplay.view_context}  )
         	.setTooltip(new tooltipSelector("View Context", [
 	            __txt("All"),
 	            __txt("Current and Children"),
@@ -278,8 +280,6 @@ function Panel_Animation_Dopesheet() {
     #endregion
     
     #region ---- Display ---- 
-        show_nodes = true;
-        
         tooltip_loop_prop   = noone;
         tooltip_loop_type   = new tooltipSelector(__txt("panel_animation_looping_mode", "Looping mode"), global.junctionEndName);
         
@@ -520,6 +520,9 @@ function Panel_Animation_Dopesheet() {
 	    global.menuItems_animation_name_empty = [
 	        "animation_new_folder",
 	        "animation_new_folder_select",
+	        -1,
+	        "animation_dopesheet_expand", 
+			"animation_dopesheet_collapse", 
 	    ];
 	    
 	    global.menuItems_animation_name_item = [
@@ -527,6 +530,9 @@ function Panel_Animation_Dopesheet() {
 	        -1,
 	        "animation_new_folder",
 	        "animation_new_folder_select",
+	        -1,
+	        "animation_dopesheet_expand", 
+			"animation_dopesheet_collapse", 
 	    ];
 	    
 	    global.menuItems_animation_name_group = [
@@ -536,6 +542,9 @@ function Panel_Animation_Dopesheet() {
 	        -1,
 	        "animation_new_folder",
 	        "animation_new_folder_select",
+	        -1,
+	        "animation_dopesheet_expand", 
+			"animation_dopesheet_collapse", 
 	    ];
 	    
 	    global.menuItems_animation_name_prop_axis = [
@@ -1713,77 +1722,83 @@ function Panel_Animation_Dopesheet() {
             draw_set_alpha(1);
         }
         
-        if(is(animator.prop, __NodeValue_Active)) { // Draw active region
-	        var _ox = timeline_shift, _nx;
-        	var _y1 = timeline_shift + GLOBAL_TOTAL_FRAMES * timeline_scale;
-        	var _ov, _nv;
-        	
-        	draw_set_color_alpha(COLORS._main_value_positive, .4);
-        	
-        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
-	            var key = key_list[k];
-	            _nx = key.dopesheet_x;
-	            _nv = key.value;
-	            
-	            if(k && _ov)          draw_line_width(_ox, _cy, _nx, _cy, ui(4));
-	            if(k == n - 1 && _nv) draw_line_width(_nx, _cy, _y1, _cy, ui(4));
-	            
-	            _ox = _nx;
-	            _ov = _nv;
-        	}
-        	
-        	draw_set_alpha(1);
-        	
-        } else if(animator.prop.type == VALUE_TYPE.boolean) { // Draw boolean true region
-        	var _ox = timeline_shift, _nx;
-        	var _y1 = timeline_shift + GLOBAL_TOTAL_FRAMES * timeline_scale;
-        	var _ov, _nv;
-        	
-        	draw_set_color_alpha(COLORS._main_value_positive, .2);
-        	
-        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
-	            var key = key_list[k];
-	            _nx = key.dopesheet_x;
-	            _nv = key.value;
-	            
-	            if(k == 0 && _nv || k && _ov) draw_line_width(_ox, _cy, _nx, _cy, ui(6));
-	            if(k == n - 1 && _nv)         draw_line_width(_nx, _cy, _y1, _cy, ui(6));
-	            
-	            _ox = _nx;
-	            _ov = _nv;
-        	}
-        	
-        	draw_set_alpha(1);
-        } else {
-        	var _ox = timeline_shift, _nx;
-        	var _ok;
-        	
-        	draw_set_color_alpha(CDEF.blue, .2);
-        	
-        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
-	            var key = key_list[k];
-	            _nx = key.dopesheet_x;
-	            
-	            if(!animator.hovering && k && _ok.freeze) draw_line_width(_ox, _cy, _nx, _cy, ui(12));
-	            
-	            _ok = key;
-	            _ox = _nx;
-        	}
-        	
-        	draw_set_alpha(1);
+        if(PROJECT.animationDisplay.stat_line) {
+	        if(is(animator.prop, __NodeValue_Active)) { // Draw active region
+		        var _ox = timeline_shift, _nx;
+	        	var _y1 = timeline_shift + GLOBAL_TOTAL_FRAMES * timeline_scale;
+	        	var _ov, _nv;
+	        	
+	        	draw_set_color_alpha(COLORS._main_value_positive, .4);
+	        	
+	        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
+		            var key = key_list[k];
+		            _nx = key.dopesheet_x;
+		            _nv = key.value;
+		            
+		            if(k && _ov)          draw_line_width(_ox, _cy, _nx, _cy, ui(4));
+		            if(k == n - 1 && _nv) draw_line_width(_nx, _cy, _y1, _cy, ui(4));
+		            
+		            _ox = _nx;
+		            _ov = _nv;
+	        	}
+	        	
+	        	draw_set_alpha(1);
+	        	
+	        } else if(animator.prop.type == VALUE_TYPE.boolean) { // Draw boolean true region
+	        	var _ox = timeline_shift, _nx;
+	        	var _y1 = timeline_shift + GLOBAL_TOTAL_FRAMES * timeline_scale;
+	        	var _ov, _nv;
+	        	
+	        	draw_set_color_alpha(COLORS._main_value_positive, .2);
+	        	
+	        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
+		            var key = key_list[k];
+		            _nx = key.dopesheet_x;
+		            _nv = key.value;
+		            
+		            if(k == 0 && _nv || k && _ov) draw_line_width(_ox, _cy, _nx, _cy, ui(6));
+		            if(k == n - 1 && _nv)         draw_line_width(_nx, _cy, _y1, _cy, ui(6));
+		            
+		            _ox = _nx;
+		            _ov = _nv;
+	        	}
+	        	
+	        	draw_set_alpha(1);
+	        	
+	        } else {
+	        	var _ox = timeline_shift, _nx;
+	        	var _ok;
+	        	
+	        	draw_set_color_alpha(CDEF.blue, .2);
+	        	
+	        	for( var k = 0, n = array_length(key_list); k < n; k++ ) {
+		            var key = key_list[k];
+		            _nx = key.dopesheet_x;
+		            
+		            if(!animator.hovering && k && _ok.freeze) draw_line_width(_ox, _cy, _nx, _cy, ui(12));
+		            
+		            _ok = key;
+		            _ox = _nx;
+	        	}
+	        	
+	        	draw_set_alpha(1);
+	        }
         }
+        
+        var escl = timeline_scale * PROJECT.animationDisplay.ease_draw_scale;
+        var ekss = PROJECT.animationDisplay.keyframe_draw_scale;
         
         for( var k = 0, n = array_length(key_list); k < n; k++ ) { // Draw easing
             var key = key_list[k];
             var t   = key.dopesheet_x;
         	
             if(key.ease_in_type == CURVE_TYPE.bezier) {
-                var _tx = t - key.ease_in[0] * timeline_scale * 2;
+                var _tx = t - key.ease_in[0] * escl;
                 draw_set_color(COLORS.panel_animation_keyframe_ease_line);
                 draw_line_width(_tx, _cy, t, _cy, 2);
                 
                 if(key.ease_in[0] > 1) {
-                	var _ttx = t - timeline_scale * 2;
+                	var _ttx = t - escl;
                 	draw_set_color_alpha(CDEF.red, .75);
                 	draw_line_width(_tx, _cy, _ttx, _cy, 2);
                 	draw_set_alpha(1);
@@ -1791,7 +1806,7 @@ function Panel_Animation_Dopesheet() {
                 
                 if(pHOVER && point_in_circle(msx, msy, _tx, prop_dope_y, rr)) {
                     key_hover = key;
-                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 0, _tx, prop_dope_y, 1, COLORS.panel_animation_keyease_selected);
+                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 0, _tx, prop_dope_y, ekss, COLORS.panel_animation_keyease_selected);
                     if(mouse_lpress(pFOCUS) && !key_mod_press(SHIFT)) {
                         keyframe_dragging  = animator.values[k];
                         keyframe_drag_type = KEYFRAME_DRAG_TYPE.ease_in;
@@ -1799,16 +1814,16 @@ function Panel_Animation_Dopesheet() {
                     }
                     
                 } else 
-                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 0, _tx, prop_dope_y, 1, COLORS.panel_animation_keyease_unselected);
+                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 0, _tx, prop_dope_y, ekss, COLORS.panel_animation_keyease_unselected);
             } 
             
             if(key.ease_out_type == CURVE_TYPE.bezier) {
-                var _tx = t + key.ease_out[0] * timeline_scale * 2;
+                var _tx = t + key.ease_out[0] * escl;
             	draw_set_color(COLORS.panel_animation_keyframe_ease_line);
                 draw_line_width(t, _cy, _tx, _cy, 2);
                                     
                 if(key.ease_out[0] > 1) {
-                	var _ttx = t + timeline_scale * 2;
+                	var _ttx = t + escl;
                 	draw_set_color_alpha(CDEF.red, .75);
                 	draw_line_width(_tx, _cy, _ttx, _cy, 2);
                 	draw_set_alpha(1);
@@ -1816,7 +1831,7 @@ function Panel_Animation_Dopesheet() {
                     
                 if(pHOVER && point_in_circle(msx, msy, _tx, prop_dope_y, rr)) {
                     key_hover = key;
-                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 1, _tx, prop_dope_y, 1, COLORS.panel_animation_keyease_selected);
+                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 1, _tx, prop_dope_y, ekss, COLORS.panel_animation_keyease_selected);
                     if(mouse_lpress(pFOCUS) && !key_mod_press(SHIFT)) {
                         keyframe_dragging  = animator.values[k];
                         keyframe_drag_type = KEYFRAME_DRAG_TYPE.ease_out;
@@ -1824,7 +1839,7 @@ function Panel_Animation_Dopesheet() {
                     }
                     
                 } else
-                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 1, _tx, prop_dope_y, 1, COLORS.panel_animation_keyease_unselected);
+                    draw_sprite_ui_uniform(THEME.timeline_key_ease, 1, _tx, prop_dope_y, ekss, COLORS.panel_animation_keyease_unselected);
             }
         }
         
@@ -1979,7 +1994,7 @@ function Panel_Animation_Dopesheet() {
                 draw_set_alpha(1);
 	        } // cache status
 	        
-	        if(show_nodes && (!_cont.show || !_cont.item.show)) continue;
+	        if(PROJECT.animationDisplay.show_nodes && (!_cont.show || !_cont.item.show)) continue;
             
             for( var j = 0, m = array_length(_cont.props); j < m; j++ ) {
                 var prop  = _cont.props[j];
@@ -2169,7 +2184,7 @@ function Panel_Animation_Dopesheet() {
             var _select  = array_exists(keyframe_selecting, keyframe);
             var t = keyframe.dopesheet_x;
             
-            if(show_nodes) {
+            if(PROJECT.animationDisplay.show_nodes) {
             	for( var j = 0, n = array_length(_cont.contexts); j < n; j++ ) {
 	                var _cxt = _cont.contexts[j];
 	                if(!_cxt.show) continue;
@@ -2292,7 +2307,7 @@ function Panel_Animation_Dopesheet() {
             			break;
             	}
             	
-            } else draw_sprite_ui_uniform(THEME.timeline_keyframe, ind, t, prop_y, 1, cc, aa);
+            } else draw_sprite_ui_uniform(THEME.timeline_keyframe, ind, t, prop_y, PROJECT.animationDisplay.keyframe_draw_scale, cc, aa);
             
             if(_select) {
             	if(_keyframe_selecting_f == noone) _keyframe_selecting_f = keyframe;
@@ -2314,7 +2329,7 @@ function Panel_Animation_Dopesheet() {
             }
             	
             if(keyframe_boxing) {
-                var box_x0 = min(keyframe_box_sx, msx);
+                var box_x0 = min(keyframe_box_sx, msx); 
                 var box_x1 = max(keyframe_box_sx, msx);
                 var box_y0 = min(keyframe_box_sy, msy);
                 var box_y1 = max(keyframe_box_sy, msy);
@@ -2385,7 +2400,7 @@ function Panel_Animation_Dopesheet() {
 	        var _title_x = _gx + ui(4);
 	        draw_set_text(f_p4, fa_left, fa_center, cc);
 	        
-        	if(!show_nodes) {
+        	if(!PROJECT.animationDisplay.show_nodes) {
 	            var _txt = animator.prop.node.getDisplayName();
 	            
 	            draw_set_alpha(aa * 0.5);
@@ -2636,7 +2651,7 @@ function Panel_Animation_Dopesheet() {
             	
 	            for( var i = 0, n = array_length(timeline_contents); i < n; i++ ) {
 	                var _cont = timeline_contents[i];
-	                if(!_cont.show && show_nodes) continue;
+	                if(!_cont.show && PROJECT.animationDisplay.show_nodes) continue;
 	                
 	                var _y = _cont.y - oy;
 	                var _h = _cont.h;
@@ -2697,7 +2712,7 @@ function Panel_Animation_Dopesheet() {
             
             for( var i = 0, n = array_length(timeline_contents); i < n; i++ ) {
                 var _cont = timeline_contents[i];
-                if(!_cont.show && show_nodes) continue;
+                if(!_cont.show && PROJECT.animationDisplay.show_nodes) continue;
                 
                 var _y = _cont.y;
                 var _h = _cont.h;
@@ -2724,9 +2739,9 @@ function Panel_Animation_Dopesheet() {
 					// if(_sel) draw_sprite_stretched_ext(THEME.box_r2, 1, _x, _y, _w, lh, COLORS._main_accent, 1);
                 }
 				
-                if(show_nodes) drawDopesheet_Label_Item(_cont, 0, _cont.y - oy, msx, msy);
+                if(PROJECT.animationDisplay.show_nodes) drawDopesheet_Label_Item(_cont, 0, _cont.y - oy, msx, msy);
                 
-                if(_cont.type == "node" && (_cont.item.show || !show_nodes)) {
+                if(_cont.type == "node" && (_cont.item.show || !PROJECT.animationDisplay.show_nodes)) {
                 	var prop = _cont.item;
                     var tx   = tool_width;
         			var ty   = -infinity;
@@ -3012,10 +3027,10 @@ function Panel_Animation_Dopesheet() {
                 _cont.y   = key_y;
                 _cont.h   = 0;
                 
-                if(!_cont.show && show_nodes) continue;
+                if(!_cont.show && PROJECT.animationDisplay.show_nodes) continue;
                 if(item_dragging != noone && item_dragging.item == _item) continue;
                 
-                var _expand = _cont.type == "node" && (_item.show || !show_nodes); 
+                var _expand = _cont.type == "node" && (_item.show || !PROJECT.animationDisplay.show_nodes); 
                 
                 var _ks = key_y;
                 if(_item.color_dsp > -1) {
@@ -3032,8 +3047,8 @@ function Panel_Animation_Dopesheet() {
                     c1 = COLORS.panel_animation_dope_key_bg_hover;
                 }
                 
-                key_y   += _item.h * show_nodes + _expand * ui(10);
-                _cont.h += _item.h * show_nodes;
+                key_y   += _item.h * PROJECT.animationDisplay.show_nodes + _expand * ui(10);
+                _cont.h += _item.h * PROJECT.animationDisplay.show_nodes;
                 _ks      = key_y - ui(10);
                 
                 if(_expand) 
@@ -3155,7 +3170,7 @@ function Panel_Animation_Dopesheet() {
                 	if(_hovering) keyframe_boxable = false;
                 	timeline_snap_points[i] = _node.timeline_content_snap;
                 	
-                } else {
+                } else if(PROJECT.animationDisplay.active_region) {
 	                var _rs = _node.animation_range_start;
 	        		var _re = _node.animation_range_end;
 	                	
@@ -3177,9 +3192,9 @@ function Panel_Animation_Dopesheet() {
 	                	var _eh = _ey1 - _ey0;
 	                	var _es = ui(4);
 	                	
-	                	var _hovF = show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex0 - _es, _ey0, _ex0 + _es, _ey1);
-	                	var _hovL = show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex1 - _es, _ey0, _ex1 + _es, _ey1);
-	                	var _hovC = show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex0, _ey0, _ex1, _ey1);
+	                	var _hovF = PROJECT.animationDisplay.show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex0 - _es, _ey0, _ex0 + _es, _ey1);
+	                	var _hovL = PROJECT.animationDisplay.show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex1 - _es, _ey0, _ex1 + _es, _ey1);
+	                	var _hovC = PROJECT.animationDisplay.show_nodes && mouse_on_timeline && point_in_rectangle(msx, msy, _ex0, _ey0, _ex1, _ey1);
 	                	
 	                	var _hov = 0;
 	                	if(_hovC) _hov = 1;
@@ -3538,7 +3553,7 @@ function Panel_Animation_Dopesheet() {
             var _phover = pHOVER && msy > topbar_height;
             for( var i = 0, n = array_length(timeline_contents); i < n; i++ ) {
                 var _cont = timeline_contents[i];
-                if(!_cont.show && show_nodes) continue;
+                if(!_cont.show && PROJECT.animationDisplay.show_nodes) continue;
                 
                 var _hov  = _cont.item.drawDopesheetOver(timeline_shift, _cont.y, timeline_scale, msx, msy, _phover, pFOCUS);
                 if(is_undefined(_hov)) continue;
@@ -3843,7 +3858,7 @@ function Panel_Animation_Dopesheet() {
 					if(mouse_lpress(pFOCUS)) marker_dragging = _mkHover;
 					if(mouse_rpress(pFOCUS)) {
 						menuCall("", [
-							menuItem(__txt("Edit Marker..."), function(m) /*=>*/ 
+							menuItem(__txt("Edit Marker") + "...", function(m) /*=>*/ 
 								{return dialogPanelCall(new Panel_Animation_Marker_Settings(m), mouse_mx + ui(8), mouse_my + ui(8), 
 									{ anchor: ANCHOR.left | ANCHOR.bottom })}).setParam(_mkHover),
 							menuItem(__txt("Remove Marker"),  function(m) /*=>*/ {return array_remove(PROJECT.timelineMarkers, m)}).setParam(_mkHover),

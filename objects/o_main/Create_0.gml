@@ -225,6 +225,7 @@ if(linux_ui_freeze)
 #region parameter
 	minimized = false;
 	_modified = false;
+	_caption  = "";
 #endregion
 
 #region dialog

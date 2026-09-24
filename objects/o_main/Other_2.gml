@@ -76,8 +76,8 @@
 		}
 		
 		APP_DIRECTORY = working_directory;
-		DIRECTORY     = string_replace(game_save_id, "com.yoyogames.macyoyorunner", "com.MakhamDev.PixelComposer");
 	    APP_LOCATION  = working_directory;
+		DIRECTORY     = string_replace(game_save_id, "com.yoyogames.macyoyorunner", "com.MakhamDev.PixelComposer");
 	    
 		PREFERENCES_DIR = $"{DIRECTORY}Preferences/{PREF_VERSION}/";
 		
@@ -137,6 +137,9 @@
 			// APP_LOCATION = "D:/Project/MakhamDev/LTS-PixelComposer/PixelComposer/datafiles/";
 		// }
 	}
+	
+	if(!directory_exists(working_directory))
+		show_message($"Cannot locate working directory at {working_directory}.\n\nPlease report this problem to Pixel Composer Discord.");
 	
 	log_clear();
 	log_newline();

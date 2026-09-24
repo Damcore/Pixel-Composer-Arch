@@ -801,26 +801,6 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 	
 	static onInputResize  = function() /*=>*/ { refreshDynamicInput(); triggerRender(); }
 	
-	static getOutput = function(_y = 0, junc = noone) {
-		var _targ = noone;
-		var _dy   = infinity;
-		
-		for( var i = 0; i < array_length(outputs); i++ ) {
-			var _outp = outputs[i];
-			
-			if(!is(_outp, NodeValue)) continue;
-			if(!_outp.isVisible())    continue;
-			if(junc != noone && !junc.isConnectable(_outp, true)) continue;
-			
-			var _ddy = abs(_outp.y - _y);
-			if(_ddy < _dy) {
-				_targ = _outp;
-				_dy   = _ddy;
-			}
-		}
-		return _targ;
-	}
-	
 	static getInput = function(_y = 0, _junc = noone, _shft = input_fix_len, _over = false) {
 		var _targ = noone;
 		var _dy   = infinity;
@@ -845,6 +825,51 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		}
 		
 		return _targ;
+	}
+	
+	static getInputIndex = function(_ind = 0, _tag = VALUE_TAG.none) {
+		switch(_tag) {
+			case VALUE_TAG.updateInTrigger  : return updatedInTrigger;
+			case VALUE_TAG.updateOutTrigger : return updatedOutTrigger;
+			case VALUE_TAG.matadata         : return array_safe_get_fast(junc_meta, _ind, noone);
+		}
+		
+		return array_safe_get_fast(inputs, _ind, noone);
+	}
+	
+	static getOutput = function(_y = 0, junc = noone) {
+		var _targ = noone;
+		var _dy   = infinity;
+		
+		for( var i = 0; i < array_length(outputs); i++ ) {
+			var _outp = outputs[i];
+			
+			if(!is(_outp, NodeValue)) continue;
+			if(!_outp.isVisible())    continue;
+			if(junc != noone && !junc.isConnectable(_outp, true)) continue;
+			
+			var _ddy = abs(_outp.y - _y);
+			if(_ddy < _dy) {
+				_targ = _outp;
+				_dy   = _ddy;
+			}
+		}
+		return _targ;
+	}
+	
+	static getOutputIndex = function(_ind = 0, _tag = VALUE_TAG.none) {
+		switch(_tag) {
+			case VALUE_TAG.updateInTrigger  : return updatedInTrigger;
+			case VALUE_TAG.updateOutTrigger : return updatedOutTrigger;
+			case VALUE_TAG.matadata         : return array_safe_get_fast(junc_meta, _ind, noone);
+		}
+		
+		if(_ind >= 1000) { // connect bypass
+			var _inp = array_safe_get_fast(inputs, _ind - 1000, noone);
+			return _inp == noone? noone : _inp.getBypassJunc();
+		}
+		
+		return array_safe_get_fast(outputs, _ind, noone);
 	}
 	
 	static deleteDynamicInput = function(index) {
@@ -1548,7 +1573,9 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		for( var i = 0, n = array_length(outputs); i < n; i++ ) {
 			var _outp = outputs[i];
 			
-			array_foreach(_outp.getJunctionTo(), function(_t) /*=>*/ {
+			array_foreach(_outp.getJunctionTo(), function(_t,_) /*=>*/ {
+				if(!_t.node.active || !_t.node.renderActive) return false;
+				
 				if(has(_t, "from") && is(_t.from, Node_Group_Input)) {
 					profile_log(3, $"Propagate passive dynamic to group io {_t.from}");
 					_t.from.passiveDynamic = true;
@@ -1558,6 +1585,8 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 				profile_log(3, $"Propagate passive dynamic to {_t.node}");
 				_t.node.passiveDynamic = true;
 				_t.node.rendered       = false;
+				
+				return true;
 			});
 		}
 	}
@@ -2180,7 +2209,8 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		if(_panel && _panel.node_hovering == self) ba = .1;
 		draw_sprite_stretched_ext(bg_spr, 3, xx, yy, w * _s, nh, nodeC, ba);
 		
-		var cc = renderActive? COLORS._main_text : COLORS._main_text_sub;
+		var cc = renderActive? COLORS._main_text : COLORS._main_text_sub; cc = c_white;
+		
 		if(PREFERENCES.node_show_render_status && !rendered)
 			cc = isRenderable()? COLORS._main_value_positive : COLORS._main_value_negative;
 		if(!reqpass)
@@ -2845,10 +2875,10 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 			
 			if(node_draw_icon != undefined) {
 				if(node_draw_icon == -1)
-					draw_sprite_bbox_uniform(getMetaSpr(), 0, draw_bbox);
+					draw_sprite_bbox_uniform(getMetaSpr(), 0, draw_bbox, c_white, 1, true);
 				
 				if(node_draw_icon != -1)
-					draw_sprite_bbox_uniform(node_draw_icon, node_draw_icon_index, draw_bbox);
+					draw_sprite_bbox_uniform(node_draw_icon, node_draw_icon_index, draw_bbox, c_white, 1, true);
 			}
 			
 			if(onDrawNode) {
@@ -3206,14 +3236,14 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		return subt == noone || t.selecting == subt;
 	}
 	
-	static getUsingToolName = function() { 
+	static getUsingToolName   = function() { 
 		var _tool  = PANEL_PREVIEW.tool_current;
 		return _tool == noone? "" : _tool.getName(_tool.selecting);
 	}
 	
-	static getToolNode     = undefined;
-	static getToolSettings = function() /*=>*/ {return tool_settings};
-	static showTool        = function() /*=>*/ {return tools != -1 || toolShow};
+	static getToolNode        = undefined;
+	static getToolSettings    = function() /*=>*/ {return tool_settings};
+	static showTool           = function() /*=>*/ {return tools != -1 || toolShow};
 	static drawPreviewToolbar = noone;
 	
 	static selectAll   = undefined;
@@ -3503,7 +3533,7 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 			renamed       = load_map[$ "renamed"]       ?? false;
 			renamedManual = load_map[$ "renamedManual"] ?? false;
 			
-			preview_channel = load_map[$ "prevCh"] ?? 0;
+			preview_channel = load_map[$ "prevCh"] ?? preview_channel;
 			
 			if(has(load_map, "name")) setDisplayName(load_map.name);
 			internalName = load_map[$ "iname"] ?? internalName;
@@ -3580,35 +3610,36 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 	}
 	
 	static inputBalance = function() { // Cross-version compatibility for dynamic input nodes
-		if(!has(load_map, "data_length")) 
+		if(!has(load_map, "data_length")) {
+			array_resize(load_map.inputs, input_fix_len)
 			return;
+		}
 		
 		var _input_fix_len  = load_map.input_fix_len;
 		var _data_length    = load_map.data_length;
 		var _dynamic_inputs = (array_length(load_map.inputs) - _input_fix_len) / _data_length;
 		if(frac(_dynamic_inputs) != 0) {
 			noti_warning("LOAD: Uneven dynamic input.", noone, self);
-			
 			_dynamic_inputs = ceil(_dynamic_inputs);
 		}
 		
-		if(_input_fix_len == input_fix_len && _data_length == data_length) 
-			return;
-		
-		var _pad_dyna = data_length - _data_length;
-		
-		for( var i = _dynamic_inputs; i >= 1; i-- ) {
-			var _ind = _input_fix_len + i * _data_length;
-			
-			if(_pad_dyna > 0)
-				repeat(_pad_dyna) array_insert(load_map.inputs, _ind, noone);
-			else
-				array_delete(load_map.inputs, _ind + _pad_dyna, -_pad_dyna);
+		if(data_length != _data_length) {
+			var _pad_dyna = data_length - _data_length;
+			for( var i = _dynamic_inputs; i >= 1; i-- ) {
+				var _ind = _input_fix_len + i * _data_length;
+				
+				if(_pad_dyna > 0)
+					repeat(_pad_dyna) array_insert(load_map.inputs, _ind, noone);
+				else
+					array_delete(load_map.inputs, _ind + _pad_dyna, -_pad_dyna);
+			}
 		}
 		
-		var _pad_fix = input_fix_len - _input_fix_len;
-		repeat(_pad_fix) 
-			array_insert(load_map.inputs, _input_fix_len, noone);
+		if(input_fix_len != _input_fix_len) {
+			var _pad_fix = input_fix_len - _input_fix_len;
+			repeat(_pad_fix) array_insert(load_map.inputs, _input_fix_len, noone);
+		}
+		
 	}
 	
 	static inputGenerate = function() { // Generate inputs for dynamic input nodes

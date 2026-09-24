@@ -184,6 +184,7 @@
 		
 			PREFERENCES.textbox_incremental             = true;
 			PREFERENCES.widget_autocomplete_delay       = 500;
+			PREFERENCES.checkbox_label                  = true;
 			PREFERENCES.alt_picker						= true;
 			
 			PREFERENCES.curvebox_default_height         = 200;
@@ -342,6 +343,18 @@
 				line_extend			: 16,
 				
 				connect_on_create   : false, 
+			}
+			
+			PREFERENCES.project_animationDisplay = {
+				show_nodes          : true,
+				node_name_type      : 0, 
+				view_context        : 0, 
+				stat_line           : true, 
+				
+				active_region       : true,
+				
+				ease_draw_scale     : 2,  
+				keyframe_draw_scale : 1, 
 			}
 		#endregion
 		
@@ -616,7 +629,8 @@
 			
 			if(OS == os_windows) {
 				DISPLAY_DATA  = display_measure_all();
-				MULTI_WINDOWS = code_is_compiled()? PREFERENCES.window_multi : false;
+				MULTI_WINDOWS = PREFERENCES.window_multi;
+				// if(!code_is_compiled()) MULTI_WINDOWS = false;
 				
 				if(is_array(DISPLAY_DATA))
 				for( var i = 0, n = array_length(DISPLAY_DATA); i < n; i++ ) {

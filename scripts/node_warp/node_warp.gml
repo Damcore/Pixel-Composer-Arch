@@ -17,7 +17,7 @@ function Node_Warp(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 	newInput( 9, nodeValue_Vec2( "Relative Dimension", [ 1, 1 ] ));
 	
 	////- =Area
-	newInput(13, nodeValue_Area( "Area",    DEF_AREA_REF )).setUnitSimple();
+	newInput(13, nodeValue_Area( "Area",    DEF_AREA_REF )).setUnitSimple(true, function() /*=>*/ {return surface_get_dimension(getInputSingle(0))});
 	
 	////- =Warp
 	newInput( 1, nodeValue_Vec2( "Top Left",       [0,0] )).hideLabel().setUnitSimple();
@@ -406,7 +406,7 @@ function Node_Warp(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 			
 			var tl      = _data[ 1];
 			var tr      = _data[ 2];
-			var bl      = _data[ 3];
+			var bl      = _data[ 3]; 
 			var br      = _data[ 4];
 			
 			var uvPos   = _data[12];
@@ -417,6 +417,8 @@ function Node_Warp(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 			inputs[7].setVisible(_dimTyp == 1);
 			inputs[8].setVisible(true);
 			inputs[9].setVisible(_dimTyp == 2);
+			
+			if(!is_surface(_surfF)) return _outSurf;
 		#endregion
 		
 		var x0 = _area[0] - _area[2];
@@ -428,7 +430,7 @@ function Node_Warp(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 			shader_set_2( "uvPosition", uvPos );
 			shader_set_2( "uvScale",    uvSca );
 			
-			shader_set_2( "position",   [ x0, y0 ] );
+			shader_set_2( "position",   [ x0, y0 ] ); 
 			shader_set_2( "scale",      [ x1 - x0, y1 - y0 ] );
 		shader_reset();
 		

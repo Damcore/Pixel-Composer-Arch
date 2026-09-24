@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.21.10.002",
+    "changes": [
+      {
+        "date": "2026-09-15T01:19:03.203Z",
+        "node": "",
+        "commit": "**Draw Gradient**: Add edit tools."
+      },
+      {
+        "date": "2026-09-15T01:50:35.149Z",
+        "node": "any",
+        "commit": "Introduced"
+      }
+    ]
+  },
+  {
     "version": "1.21.9.209",
     "changes": [
       {

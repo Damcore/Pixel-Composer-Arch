@@ -75,6 +75,7 @@ function Project() constructor {
 	nodeMap	    = ds_map_create();
 	nodeNameMap = ds_map_create();
 	nodeTopoID  = "";
+	pinnedNode  = [];
 	
 	pathInputs  = [];
 	
@@ -95,6 +96,8 @@ function Project() constructor {
 	graphConnection  = variable_clone(PREFERENCES.project_graphConnection);
 	graphBGIndexData = undefined;
 	graphBG          = undefined;
+	
+	animationDisplay = variable_clone(PREFERENCES.project_animationDisplay);
 	
 	onion_skin = {
 		enabled : false,
@@ -381,6 +384,8 @@ function Project() constructor {
 					
 				}).setIcon(s_attr_shader, function() /*=>*/ {return bool(attributes.shader)}, COLORS._main_icon_light)).setUpdateHover(false) ], 
 				
+				-1, 
+				
 				[ "Export Directory", "export_dir", textBox_Text(function(str) /*=>*/ { attributes.export_dir = str; return true; })
 					.setSideButton( button(function() /*=>*/ { 
 						var _fpath = get_open_directory_compat(attributes.export_dir); key_release();
@@ -518,6 +523,10 @@ function Project() constructor {
 		for( var i = 0, n = array_length(allNodes); i < n; i++ ) 
 			allNodes[i].purgeData();
 	}
+	
+	static nodePinToggle = function(_n) /*=>*/ { array_toggle(      pinnedNode, _n.node_id ); return self; }
+	static nodePinAdd    = function(_n) /*=>*/ { array_push_unique( pinnedNode, _n.node_id ); return self; }
+	static nodePinRemove = function(_n) /*=>*/ { array_remove(      pinnedNode, _n.node_id ); return self; }
 	
 	////- Render
 	
@@ -790,6 +799,8 @@ function Project() constructor {
 		var _insp_node = PANEL_INSPECTOR? PANEL_INSPECTOR.getInspecting() : noone;
 		_map.inspectingNode = _insp_node? _insp_node.node_id : noone;
 		
+		_map.pinnedNode      = array_clone(pinnedNode);
+		
 		_map.previewGrid     = variable_clone(previewGrid);
 		_map.previewRuler    = array_clone(previewRuler);
 		
@@ -797,6 +808,8 @@ function Project() constructor {
 		_map.graphConnection = variable_clone(graphConnection);
 		_map.graph_display_parameter = graphDisplay;
 		if(graphBGIndexData != undefined) _map.graphBGIndexData = graphBGIndexData;
+		
+		_map.animationDisplay = variable_clone(animationDisplay);
 		
 		_map.attributes      = variable_clone(attributes);
 		_map.data            = variable_clone(data);
@@ -903,6 +916,8 @@ function Project() constructor {
 			if(has(_map, "graphConnection"))         struct_override(graphConnection, _map.graphConnection);
 			if(has(_map, "graph_display_parameter")) struct_override(graphDisplay,    _map.graph_display_parameter);
 			if(has(_map, "graphBGIndexData"))        graphBGIndexData = _map.graphBGIndexData;
+			
+			if(has(_map, "animationDisplay"))        struct_override(animationDisplay, _map.animationDisplay);
 		}
 		
 		is_nightly	= _map[$ "is_nightly"]  ?? is_nightly;
@@ -979,6 +994,8 @@ function Project() constructor {
 			var _node = nodeMap[? inspectingNode];
 			if(_node) PANEL_INSPECTOR.setInspecting(_node);
 		}
+		
+		pinnedNode      = struct_try_get(_map, "pinnedNode", []);
 		
 		for( var i = 0, n = array_length(customPanels); i < n; i++ ) {
 			var _p = customPanels[i];

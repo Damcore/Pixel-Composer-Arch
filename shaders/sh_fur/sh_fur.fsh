@@ -129,22 +129,196 @@
 
 #endregion -- curve --
 
-#pragma use(uv)
-#region -- uv -- [1779523757.7465837]
+#pragma use(gradient)
+#region -- gradient -- [1789802993.4377005]
+	#ifdef _YY_HLSL11_ 
+        #define GRADIENT_LIMIT 128
+    #else 
+        #define GRADIENT_LIMIT 64
+    #endif
+	
+	uniform int		  gradient_blend;
+	uniform vec4	  gradient_color[GRADIENT_LIMIT];
+	uniform float	  gradient_time[GRADIENT_LIMIT];
+	uniform int		  gradient_keys;
+	uniform int       gradient_use_map;
+	uniform vec4      gradient_map_range;
+	uniform sampler2D gradient_map;
+
+	vec3 linearToGamma(vec3 c) { return pow(c, vec3(     2.2)); }
+	vec3 gammaToLinear(vec3 c) { return pow(c, vec3(1. / 2.2)); }
+	
+	vec3 rgbMix(vec3 c1, vec3 c2, float t) {
+		vec3 k1 = linearToGamma(c1);
+		vec3 k2 = linearToGamma(c2);
+		
+		return gammaToLinear(mix(k1, k2, t));
+	} 
+	
+	vec3 rgb2oklab(vec3 c) {
+		const mat3 kCONEtoLMS = mat3(                
+	         0.4121656120,  0.2118591070,  0.0883097947,
+	         0.5362752080,  0.6807189584,  0.2818474174,
+	         0.0514575653,  0.1074065790,  0.6302613616);
+	    
+		c = pow(c, vec3(2.2));
+		c = pow( max(vec3(0.), kCONEtoLMS * c), vec3(1.0 / 3.0) );
+		
+		return c;
+	}
+	
+	vec3 oklab2rgb(vec3 c) {
+		const mat3 kLMStoCONE = mat3(
+	         4.0767245293, -1.2681437731, -0.0041119885,
+	        -3.3072168827,  2.6093323231, -0.7034763098,
+	         0.2307590544, -0.3411344290,  1.7068625689);
+        
+		c = kLMStoCONE * (c * c * c);
+		c = pow( max(vec3(0.), c), vec3(1. / 2.2));
+		
+	    return c;
+	}
+
+	vec3 oklabMax(vec3 c1, vec3 c2, float t) {
+		vec3 k1 = rgb2oklab(c1);
+		vec3 k2 = rgb2oklab(c2);
+		
+		return oklab2rgb(mix(k1, k2, t));
+	} 
+	
+	vec3 rgb2hsv(vec3 c) {
+		vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+	    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+	    float d = q.x - min(q.w, q.y);
+	    float e = 0.0000000001;
+	    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+	}
+
+	vec3 hsv2rgb(vec3 c) {
+	    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+	}
+
+	float hueLerp(float a0, float a1, float t) {
+		float da = fract(a1 - a0);
+	    float ds = fract(2. * da) - da;
+	    return a0 + ds * t;
+	}
+
+	float hueLerpInv(float a0, float a1, float t) {
+		float da = fract(a1 - a0);
+	    float ds = fract(2. * da) - da;
+	    ds -= sign(ds);
+		return a0 + ds * t;
+	}
+
+	vec3 hsvMix(vec3 c1, vec3 c2, float t, bool inv) {
+		vec3 h1 = rgb2hsv(c1);
+		vec3 h2 = rgb2hsv(c2);
+	
+		vec3 h = vec3(0.);
+		h.x = inv ? hueLerpInv(h1.x, h2.x, t) : hueLerp(h1.x, h2.x, t);
+		h.y = mix(h1.y, h2.y, t);
+		h.z = mix(h1.z, h2.z, t);
+	
+		return hsv2rgb(h);
+	}
+
+	vec4 rgb2cmyk(vec3 c) {
+		float k = 1.0 - max(max(c.r, c.g), c.b);
+		float cmyk_c = (1.0 - c.r - k) / (1.0 - k);
+		float cmyk_m = (1.0 - c.g - k) / (1.0 - k);
+		float cmyk_y = (1.0 - c.b - k) / (1.0 - k);
+		return vec4(cmyk_c, cmyk_m, cmyk_y, k);
+	}
+
+	vec3 cmyk2rgb(vec4 c) {
+		float k = c.w;
+		float r = (1.0 - c.x) * (1.0 - k);
+		float g = (1.0 - c.y) * (1.0 - k);
+		float b = (1.0 - c.z) * (1.0 - k);
+		return vec3(r, g, b);
+	}
+
+	vec3 cmykMix(vec3 c0, vec3 c1, float t) {
+		vec4 cmyk0 = rgb2cmyk(c0);
+		vec4 cmyk1 = rgb2cmyk(c1);
+		vec4 cmyk = mix(cmyk0, cmyk1, t);
+		return cmyk2rgb(cmyk);
+	}
+
+	vec4 gradientEval(in float prog) {
+		if(gradient_use_map == 1) {
+			vec2 samplePos = mix(gradient_map_range.xy, gradient_map_range.zw, prog);
+			return texture2D( gradient_map, samplePos );
+		}
+		
+		for(int i = 0; i < GRADIENT_LIMIT; i++) {
+			if(gradient_time[i] == prog) {
+				return gradient_color[i];
+				
+			} else if(gradient_time[i] > prog) {
+				if(i == 0) 
+					return gradient_color[i];
+				else {
+					float t  = (prog - gradient_time[i - 1]) / (gradient_time[i] - gradient_time[i - 1]);
+					vec3  c0 = gradient_color[i - 1].rgb;
+					vec3  c1 = gradient_color[i].rgb;
+					float a  = mix(gradient_color[i - 1].a, gradient_color[i].a, t);
+					
+					if(gradient_blend == 0)
+						return vec4(mix(c0, c1, t), a);
+						
+					else if(gradient_blend == 1)
+						return gradient_color[i - 1];
+						
+					else if(gradient_blend == 2)
+						return vec4(hsvMix(c0, c1, t, false), a);
+						
+					else if(gradient_blend == 5)
+						return vec4(hsvMix(c0, c1, t, true), a);
+						
+					else if(gradient_blend == 3)
+						return vec4(oklabMax(c0, c1, t), a);
+					
+					else if(gradient_blend == 4)
+						return vec4(rgbMix(c0, c1, t), a);
+
+					else if(gradient_blend == 6)
+						return vec4(cmykMix(c0, c1, t), a);
+				}
+				break;
+			}
+			
+			if(i >= gradient_keys - 1)
+				return gradient_color[gradient_keys - 1];
+		}
+	
+		return gradient_color[gradient_keys - 1];
+	}
+	
+#endregion -- gradient --
+
+#pragma use(sampler_simple)
+#region -- sampler_simple -- [1788846732.6884737]
+    uniform int  sampleMode;
+    
     uniform sampler2D uvMap;
     uniform int   useUvMap;
     uniform float uvMapMix;
 
-    vec2 getUV(in vec2 uv) {
-        if(useUvMap == 0) return uv;
-
-        vec2 vuv   = texture2D( uvMap, uv ).xy;
-             vuv.y = 1.0 - vuv.y;
-
-        vec2 vtx = mix(uv, vuv, uvMapMix);
-        return vtx;
+    vec2 getUV(vec2 tx) {
+        if(useUvMap == 1) {
+            vec2 map = texture2D(uvMap, tx).xy;
+            map.y    = 1.0 - map.y;
+            tx       = mix(tx, map, uvMapMix);
+        }
+        return tx;
     }
-    
+
     vec2 getUVA(in vec2 uv, out float alpha) {
         if(useUvMap == 0) {
             alpha = 1.0;
@@ -158,7 +332,34 @@
         vec2 vtx = mix(uv, vuv, uvMapMix);
         return vtx;
     }
-#endregion -- uv --
+    
+    vec4 sampleTexture( sampler2D texture, vec2 pos, float mapBlend) {
+        if(useUvMap == 1) {
+            vec2 map = texture2D(uvMap, pos).xy;
+            map.y    = 1.0 - map.y;
+            pos      = mix(pos, map, mapBlend * uvMapMix);
+        }
+
+        if(pos.x >= 0. && pos.y >= 0. && pos.x <= 1. && pos.y <= 1.)
+            return texture2D(texture, pos);
+        
+			 if(sampleMode <= 1) return vec4(0.);
+		else if(sampleMode == 2) return vec4(0.,0.,0., 1.);
+		else if(sampleMode == 3) return texture2D(texture, clamp(pos, 0., 1.));
+		else if(sampleMode == 4) return texture2D(texture, fract(pos));
+        // 5
+		else if(sampleMode == 6) { vec2 sp = vec2(fract(pos.x), pos.y); return (sp.y < 0. || sp.y > 1.) ? vec4(0.) : texture2D(texture, sp); } 
+		else if(sampleMode == 7) { vec2 sp = vec2(fract(pos.x), pos.y); return (sp.y < 0. || sp.y > 1.) ? vec4(0.,0.,0.,1.) : texture2D(texture, sp); } 
+		else if(sampleMode == 8) return texture2D(texture, vec2(fract(pos.x), clamp(pos.y, 0., 1.)));
+		// 9
+		else if(sampleMode == 10) { vec2 sp = vec2(pos.x, fract(pos.y)); return (sp.x < 0. || sp.x > 1.) ? vec4(0.) : texture2D(texture, sp); } 
+		else if(sampleMode == 11) { vec2 sp = vec2(pos.x, fract(pos.y)); return (sp.x < 0. || sp.x > 1.) ? vec4(0.,0.,0.,1.) : texture2D(texture, sp); } 
+		else if(sampleMode == 12) return texture2D(texture, vec2(clamp(pos.x, 0., 1.), fract(pos.y)));
+		
+        return vec4(0.);
+    }
+    vec4 sampleTexture( sampler2D texture, vec2 pos) { return sampleTexture(texture, pos, 0.); }
+#endregion -- sampler_simple --
 
 varying vec2 v_vTexcoord;
 varying vec4 v_vColour;
@@ -172,6 +373,10 @@ uniform vec2  scale;
 
 uniform int       usemask;
 uniform sampler2D mask;
+
+uniform int   distribution;
+uniform float randomness;
+uniform float overlap;
 
 uniform float density;
 uniform int   furDens;
@@ -189,17 +394,20 @@ uniform float thickness;
 uniform float thickC_curve[CURVE_MAX];
 uniform int   thickC_amount;
 
+uniform int   blendMode;
 uniform float edgeBlend;
 uniform float shadow;
+uniform vec4  shadowColor;
 
+uniform int       bgDraw;
 uniform vec4      bgcolor;
-uniform vec4      color;
+
 uniform int       usecolorSample;
 uniform sampler2D colorSample;
 
 #define PI 3.1415926535897932384626433832795
 
-float random ( vec2 st, float seed ) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233) + mod(seed, 100000.) / 10.)) * 43758.5453123); }
+float random( vec2 st, float seed ) { return fract(sin(dot(st.xy, vec2(12.9898, 78.233) + mod(seed, 100000.) / 10.)) * 43758.5453123); }
 
 float distToLine(vec2 p, vec2 a, vec2 b, out float prog) {
     vec2 pa = p - a;
@@ -218,56 +426,73 @@ void main() {
           vtx = getUVA(fract(vtx), uva);
 
     vec2  denTx   = vec2(density);
-	vec2  furRoot = floor(vtx * denTx) / denTx;
+    vec2  denDx   = 1. / denTx;
     float dist    = 99999.;
-	vec3  fur     = bgcolor.rgb;
+    
+	vec2  furRootID = floor(vtx * denTx);
+	vec2  furRoot   = furRootID * denDx;
+	vec3  furCol    = bgcolor.rgb;
+	float furAlp    = float(bgDraw);
+	
     float prog;
 	
 	int maxSpan = int(ceil(max(furLengthRange.x, furLengthRange.y)));
 
     for(int i = -maxSpan; i <= maxSpan; i++)
     for(int j = -maxSpan; j <= maxSpan; j++) {
-        vec2  froot  = furRoot + vec2(float(i), float(j)) / denTx;
+        vec2  froot  = furRoot + vec2(float(i), float(j)) * denDx;
         vec2  frootLoop = fract(froot);
-        froot.x += (random(frootLoop, seed + 456.789) * 2. - 1.) / denTx.x;
-        froot.y += random(frootLoop, seed + 123.456) / denTx.y;
+        
+        if(distribution == 0) {
+	        froot.x += (random(frootLoop, seed + 456.789) * 2. - 1.) * denDx.x * randomness;
+	        froot.y += (random(frootLoop, seed + 123.456)          ) * denDx.y * randomness;
+	        
+        }
+        
+    	froot.x  += mod(froot.y * denTx.y, 2.) * .5 * denDx.x * overlap;
+        frootLoop = fract(froot);
         
         if(usemask == 1) {
-            vec4 msk = texture2D(mask, froot);
+            vec4 msk = sampleTexture(mask, froot);
             if(msk.r * msk.a < 0.5) continue;
         }
 
-		float furSize    = usefurLengthMap == 1? texture2D(furLengthMap, froot).r : 1.;
+		float furSize    = usefurLengthMap == 1? sampleTexture(furLengthMap, froot).r : 1.;
         float furLength  = mix(furLengthRange.x, furLengthRange.y, random(frootLoop, seed + 645.485)) / density;
               furLength *= furSize;
         
         float furAngle   = radians(furAngle + furAngleRange * (random(frootLoop, seed + 9874.54) * 2. - 1.));
-        if(usefurAngleMap == 1) furAngle += texture2D(furAngleMap, froot).r * PI * 2.;
+        if(usefurAngleMap == 1) furAngle += sampleTexture(furAngleMap, froot).r * PI * 2.;
 
         vec2  furTip    = froot + vec2(cos(furAngle), -sin(furAngle)) * furLength;
         float furDist   = distToLine(vtx, froot, furTip, prog);
         if(prog < 0. || prog > 1.) continue;
 
-		float tcc = curveEval(thickC_curve, thickC_amount, 1. - prog);
+		float furPrg = 1. - prog;
+
+		float tcc = curveEval(thickC_curve, thickC_amount, furPrg);
         float thk = thickness / density * tcc * furSize;
         float furRen = step(furDist, thk);
         if(furRen == 0.) continue;
 
         if(furDist < dist) {
-            vec3 fColor = color.rgb;
+            vec3 fColor = gradientEval(random(froot, seed + 151.84)).rgb;
             if(usecolorSample == 1)
-                fColor *= texture2D(colorSample, froot).rgb;
+                fColor *= sampleTexture(colorSample, froot).rgb;
                 
             if( edgeBlend > 0. ) {
                 float blend = smoothstep(thk, thk * (1. - edgeBlend), furDist);
                 fColor = mix(bgcolor.rgb, fColor, blend);
             }
 
-            dist = furDist;
-            fur  = mix(fColor, mix(bgcolor.rgb, fColor, prog), shadow);
+            dist    = furDist;
+            furAlp  = 1.;
+            
+                 if(blendMode == 0) furCol  = mix(fColor, mix(bgcolor.rgb, fColor, prog), shadow);
+            else if(blendMode == 1) furCol += mix(bgcolor.rgb, fColor, prog) * shadow;
         }
     }
 
-	gl_FragColor = vec4(fur, 1.) * v_vColour;
+	gl_FragColor = vec4(furCol, furAlp) * v_vColour;
 	gl_FragColor.a *= uva;
 }
