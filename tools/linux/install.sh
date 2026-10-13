@@ -129,7 +129,9 @@ RUNNER_PID=\$!
     while kill -0 "\$RUNNER_PID" 2>/dev/null; do
         WINDOWS=\$(xdotool search --onlyvisible --name '^Pixel Composer' 2>/dev/null || true)
         for WINDOW in \$WINDOWS; do
-            xdotool set_window --classname pixel-composer --class pixel-composer "\$WINDOW" >/dev/null 2>&1 || true
+            if xdotool set_window --classname pixel-composer --class pixel-composer "\$WINDOW" >/dev/null 2>&1; then
+                exit 0
+            fi
         done
         sleep 0.25
     done
