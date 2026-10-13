@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.22.0",
+    "changes": [
+      {
+        "date": "2026-09-25T11:08:07.769Z",
+        "node": "Graph Panel",
+        "commit": "**Graph Panel**: Delete node now works with node chord activated."
+      },
+      {
+        "date": "2026-09-25T12:12:57.627Z",
+        "node": "3D Instancer, 3D Particle",
+        "commit": "**3D Instancer, 3D Particle**: Fix node not working on MacOS."
+      },
+      {
+        "date": "2026-09-25T23:58:21.245Z",
+        "node": "Menu Panel",
+        "commit": "**Menu Panel**: Add lock panel option."
+      }
+    ]
+  },
+  {
     "version": "1.21.6.001",
     "changes": [
       {

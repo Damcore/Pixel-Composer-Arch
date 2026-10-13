@@ -28,30 +28,30 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 	
 	////- =Font
 	newInput( 1, nodeValue_Font(  "Font", array_safe_get(FONT_INTERNAL, 0, "") )).setVisible(true, false);
-	newInput( 2, nodeValue_Int(   "Size",             16       ));
-	newInput(15, nodeValue_Bool(  "Scale to Fit",     false    ));
+	newInput( 2, nodeValue_Int(   "Size",             16            ));
+	newInput(15, nodeValue_Bool(  "Scale to Fit",     false         ));
 	
 		////- =/Font Settings
-	newInput(35, nodeValue_Font(  "Fallback Font"              )).setVisible(true, false);
-	newInput( 4, nodeValue_Vec2(  "Character Range", [32,128]  ));
-	newInput( 3, nodeValue_Bool(  "Anti-aliasing ",   false    ));
-	newInput(37, nodeValue_Bool(  "Use SDF",          false    ));
+	newInput(35, nodeValue_Font(  "Fallback Font"                   )).setVisible(true, false);
+	newInput( 4, nodeValue_Vec2(  "Character Range", [32,128]       ));
+	newInput( 3, nodeValue_Bool(  "Anti-aliasing ",   false         ));
+	newInput(37, nodeValue_Bool(  "Use SDF",          false         ));
 	
 		////- =/Letter Settings
-	newInput(11, nodeValue_Float( "Letter Spacing",   0        ));
-	newInput(12, nodeValue_Float( "Line Height",      0        ));
-	newInput(36, nodeValue_Bool(  "Monospaced",       false    ));
+	newInput(11, nodeValue_Float( "Letter Spacing",   0             ));
+	newInput(12, nodeValue_Float( "Line Height",      0             ));
+	newInput(36, nodeValue_Bool(  "Monospaced",       false         ));
 	
 	////- =Alignment
-	newInput(27, nodeValue_Int(      "Max Line Width",    0    ));
-	newInput(40, nodeValue_Bool(     "Split Word",        true ));
+	newInput(27, nodeValue_Int(      "Max Line Width",    0         ));
+	newInput(40, nodeValue_Bool(     "Split Word",        true      ));
 	newInput( 7, nodeValue_EButton(  "H Align",           0, array_create(3, THEME.inspector_text_halign) ));
 	newInput( 8, nodeValue_EButton(  "V Align",           0, array_create(3, THEME.inspector_text_valign) ));
 	
 	////- =Path
-	newInput(13, nodeValue_Path(     "Path"                    ));
-	newInput(14, nodeValue_Float(    "Path Shift",        0    ));
-	newInput(30, nodeValue_Bool(     "Rotate Along Path", true ));
+	newInput(13, nodeValue_Path(     "Path"                         ));
+	newInput(14, nodeValue_Float(    "Path Shift",        0         ));
+	newInput(30, nodeValue_Bool(     "Rotate Along Path", true      ));
 	
 	////- =Rendering
 	newInput(28, nodeValue_Bool(     "Round Position",   true       ));
@@ -73,10 +73,10 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 	newInput(21, nodeValue_Rotation( "Wave Phase",     0            ));
 	
 	////- =Trim
-	newInput(23, nodeValue_Bool(     "Trim",               false ));
+	newInput(23, nodeValue_Bool(     "Trim",               false    ));
 	newInput(25, nodeValue_EButton(  "Trim Type",          0, [ "Character", "Word", "Line" ] ));
-	newInput(24, nodeValue_SliRange( "Range",             [0,1]  ));
-	newInput(26, nodeValue_Bool(     "Use Full Text Size", false ));
+	newInput(24, nodeValue_SliRange( "Range",             [0,1]     ));
+	newInput(26, nodeValue_Bool(     "Use Full Text Size", false    ));
 	// 41
 		
 	input_display_list = [ 
@@ -287,6 +287,9 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 	attributes.debug_texture = false;
 	array_push(attributeEditors, Node_Attribute("Debug", function() /*=>*/ {return attributes.debug_texture}, function() /*=>*/ {return new checkBox(function() /*=>*/ {return toggleAttribute("debug_texture")})}));
 	
+	attributes.use_freetype = false;
+	array_push(attributeEditors, Node_Attribute("Use FreeType", function() /*=>*/ {return attributes.use_freetype}, function() /*=>*/ {return new checkBox(function() /*=>*/ {return toggleAttribute("use_freetype", true)})}));
+	
 	static getFontData = function(f, _path, _size, _aa, _sdf) {
 		var _cKey = $"{_path}|{_size}|{_aa}|{_sdf}";
 		if(has(NODE_FONT_CACHE_UV, _cKey)) return NODE_FONT_CACHE_UV[$ _cKey];
@@ -425,8 +428,9 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 		#endregion
 		
 		#region font
-			__f     = font;
+			__use_freetype = attributes.use_freetype;
 			__fData = undefined;
+			__f     = font;
 			
 			if(is_string(_font))   { 
 			 	font    = generateFont(font, _font, _size, _aa, _sdfU); 
@@ -453,6 +457,8 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 			} // fallback
 			
 			draw_set_font(__f);
+			
+			if(__use_freetype) freetype_set_font(_font, _size, _aa, _trck);
 			
 			__mono  = _mono;
 			__monoW = string_width("W");
@@ -654,15 +660,17 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 			__wave_shape =  _waveH;
 		#endregion
 		
-		surface_set_shader(_outSurf, sh_node_text_render, true, BLEND.alphamulp);
+		surface_set_shader(_outSurf, __use_freetype? sh_text_freetype_render : sh_node_text_render, true, BLEND.alphamulp);
 			shader_set_interpolation(_outSurf);
 			
 			shader_set_i("debug",      attributes.debug_texture);
 			shader_set_i("useTexture", is_surface(_tex));
 			shader_set_s("texture",    _tex);
 			
-			var _texId = font_get_texture(__f);
-			if(_texId) shader_set_2("textureSize", [1. / texture_get_texel_width(_texId), 1. / texture_get_texel_height(_texId)]);
+			if(!__use_freetype) {
+				var _texId = font_get_texture(__f);
+				if(_texId) shader_set_2("textureSize", [1. / texture_get_texel_width(_texId), 1. / texture_get_texel_height(_texId)]);
+			}
 			
 		if(_ubg) {
 			draw_clear(_bgc);
@@ -689,6 +697,8 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 		__dwDataI  = 0;
 		
 		#region draw
+			if(__use_freetype) freetype_draw_start();
+			
 			if(_use_path) {
 				var _pthl = _path.getLength(0);
 				
@@ -746,6 +756,7 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 						
 						var _clt  = __colLt[clti];
 						var _c    = colorMultiply(__col, _clt);
+						var chw   = string_width(_chr)
 						draw_set_color(_c);
 						
 						if(__fData) {
@@ -759,7 +770,9 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 							shader_set_uniform_f_array(uniform_texelData, _guv);
 						}
 						
-						draw_text_transformed(_tx, _ty, _chr, 1, 1, _nor);
+						if(__use_freetype) chw = freetype_draw_char(_tx, _ty, _chr);
+						else               draw_text_transformed(_tx, _ty, _chr, 1, 1, _nor);
+						
 						__dwData[__dwDataI++] = [_tx, _ty, _chr, 1, 1, _nor];
 						
 						if(__outAtlas) array_push(__atlas, { 
@@ -775,7 +788,7 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 							valign: va, 
 						});
 						
-						__temp_tx += (__mono? __monoW : string_width(_chr)) + __temp_trck;
+						__temp_tx += (__mono? __monoW : chw) + __temp_trck;
 					});
 					
 					ty -= string_height(_str_line) + _line;
@@ -792,6 +805,12 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 					draw_set_text(__f, fa_left, fa_top, _col);
 					draw_font_data[_array_index] = [__f, fa_left, fa_top, _col];
 					
+					if(__use_freetype) {
+						freeType_setText(_str_line);
+						freeType_GetTextBBox(buffer_get_address(__FREETYPE_BBOX));
+						lh = buffer_peek(__FREETYPE_BBOX, 2, buffer_u16);
+					}
+					
 					tx = _padd[PADDING.left];
 					
 					switch(_hali) {
@@ -801,7 +820,11 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 					}
 					
 					if(!_drawLetters) {
-						draw_text_transformed(tx, ty, _str_line, _ss, _ss, 0);
+						if(__use_freetype) {
+							freeType_setText(_str_line);
+							freetype_draw_char(tx, ty + lh, _str_line);
+							
+						} else draw_text_transformed(tx, ty, _str_line, _ss, _ss, 0);
 						
 					} else {
 						__temp_tx = tx;
@@ -840,7 +863,8 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 								shader_set_uniform_f_array(uniform_texelData, _guv);
 							}
 							
-							draw_text_transformed(_tx, _ty, _chr, __temp_ss, __temp_ss, 0);
+							if(__use_freetype) chw = freetype_draw_char(_tx, _ty + lh, _chr);
+							else               draw_text_transformed(_tx, _ty, _chr, __temp_ss, __temp_ss, 0);
 							__dwData[__dwDataI++] = [_tx, _ty, _chr, __temp_ss, __temp_ss, 0];
 							
 							if(__outAtlas) array_push(__atlas, { 
@@ -863,7 +887,10 @@ function Node_Text(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) cons
 					ty += (string_height(_str_line) + _line) * _ss;
 				}
 			}
+			
+			if(__use_freetype) freetype_draw_end();
 		#endregion
+		
 		surface_reset_shader();
 		
 		if(is_surface(_bgSrf)) {

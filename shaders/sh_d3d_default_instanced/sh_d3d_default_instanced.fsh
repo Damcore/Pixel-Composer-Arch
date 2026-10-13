@@ -1,5 +1,4 @@
 #pragma use(d3d_default_fragment)
-
 #region -- d3d_default_fragment -- [1783641786.1861165]
 #ifdef _YY_HLSL11_
 	#extension GL_OES_standard_derivatives : enable
@@ -503,14 +502,14 @@ void main() {
 		uv_coord           = fract(uv_coord * mat_texScale + mat_texShift);
 		mat_baseColor      = mat_texInterpolate == 2? texture2Dclean( gm_BaseTexture, uv_coord ) : texture2D( gm_BaseTexture, uv_coord );
 		mat_baseColor     *= v_vColour;
-
+		
 		if(mat_baseColor.a <= alphaThreshold) discard;
 		
 		vec4 final_color   = mat_baseColor;
 		float shadow       = 0.;
 		if(show_wireframe == 1 && wireframe_shade == 1) final_color = wireframeCalc(final_color);
 	#endregion 
-
+	
 	#region ++++ PBR ++++
 		float mMetalic  = mat_pbr_metalic[0];
 		if(mat_pbr_metalic_use_map == 1)
@@ -691,4 +690,3 @@ void main() {
 	gl_FragData[3] = vec4(shadow, uv_coord, 1.);
 }
 #endregion -- d3d_default_fragment --
-#pragma use(d3d_default_fragment)

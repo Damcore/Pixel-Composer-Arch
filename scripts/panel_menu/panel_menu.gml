@@ -47,6 +47,8 @@
                 .setArg([ ARG("path", ""), ARG("context", function() /*=>*/ {return PANEL_GRAPH.getCurrentContext()}, true) ])
             
             registerFunction("", "Recent Files",    "R",    c|s, function(_dat) /*=>*/ { 
+            		if(ds_list_empty(RECENT_FILES)) return undefined;
+            	
                     var amo = min(10, ds_list_size(RECENT_FILES));
                     var arr = array_create(amo);
                     var tip = array_create(amo);
@@ -59,7 +61,10 @@
                         tip[i] = [ _thm, VALUE_TYPE.surface ];
                     }
                     
-                    return submenuCall(_dat, arr, "recent_files").setTooltip(tip);
+                    var _smenu = submenuCall(_dat, arr, "recent_files");
+                    if(_smenu) _smenu.setTooltip(tip);
+                    return _smenu;
+                    
                 }).setMenu("recent_files",, true);
                 
             registerFunction("", "Import Project .zip",  "", n, __IMPORT_ZIP    ).setMenuAlt( "Compressed Archive (zip)", "import_zip"  )
@@ -78,6 +83,9 @@
         registerFunction("", "Redo",                "Z",    c|s, REDO     ).setMenu("redo", THEME.redo )
         
         registerFunction("", "Full Panel",          vk_f9,  n,   set_focus_fullscreen     ).setMenu("full_panel"      )
+        registerFunction("", "Lock Panel",          "",     n,   function() /*=>*/ { PREFERENCES.panel_lock = !PREFERENCES.panel_lock; PREF_SAVE(); } )
+        	.setMenu("lock_panel").setToggle(function() /*=>*/ {return PREFERENCES.panel_lock})
+        	
         registerFunction("", "Reset Layout",        vk_f10, c,   refreshPanel             ).setMenu("reset_layout"    )
         
         registerFunction("", "Fullscreen",          vk_f11, n,   global_fullscreen        ).setMenu("fullscreen"      )
@@ -259,6 +267,7 @@ function Panel_Menu() : PanelContent() constructor {
         ]; menu_rendering = [ __txt("Rendering"), "main_rendering" ];
         
         menu_panels  = [ __txt("Panels"), [
+            MENU_ITEMS.lock_panel,
             MENU_ITEMS.full_panel,
             MENU_ITEMS.reset_layout,
             menuItemShelf(__txt("Workspace"), function(_dat) /*=>*/ { 
@@ -358,7 +367,7 @@ function Panel_Menu() : PanelContent() constructor {
             MENU_ITEMS.toolbar_panel,
             MENU_ITEMS.dialog_manager_panel,
             MENU_ITEMS.steam_workshop_panel,
-        ]];
+        ], noone, "panel" ];
         
         menu_help = [ __txt("Help"), [
             menuItem(__txt("Pixel Composer Discord") + "...", function() /*=>*/ {return url_open("https://discord.gg/aHGbYjQh63")},    THEME.discord    ),
@@ -451,6 +460,14 @@ function Panel_Menu() : PanelContent() constructor {
         }
     #endregion
     
+    #region Context menus
+    	context_visible = [
+    		menuItem(__txt("Addon"),           function() /*=>*/ { PREFERENCES.panel_menu_show_addon   = !PREFERENCES.panel_menu_show_addon;   PREF_SAVE(); }).setToggle(function() /*=>*/ {return PREFERENCES.panel_menu_show_addon}   ),
+    		menuItem(__txt("Command Palette"), function() /*=>*/ { PREFERENCES.panel_menu_show_command = !PREFERENCES.panel_menu_show_command; PREF_SAVE(); }).setToggle(function() /*=>*/ {return PREFERENCES.panel_menu_show_command} ),
+    		menuItem(__txt("Profile"),         function() /*=>*/ { PREFERENCES.panel_menu_show_profile = !PREFERENCES.panel_menu_show_profile; PREF_SAVE(); }).setToggle(function() /*=>*/ {return PREFERENCES.panel_menu_show_profile} ),
+		]
+    #endregion
+    
     function onFocusBegin() { PANEL_MENU = self; }
     
     function drawContent(panel) {
@@ -459,13 +476,14 @@ function Panel_Menu() : PanelContent() constructor {
         var _action    = OS != os_macosx;
         var _draggable = pHOVER && pFOCUS;
         
-        if(MAC) draw_clear(COLORS.bg);
-        else    draw_clear_alpha(COLORS.panel_bg_clear, 1);
-        var hori = w > h;
-        var font = f_p3;
-        var m    = [mx, my];
+        if(PREFERENCES.panel_menu_draw_bg) 
+             draw_clear_alpha(COLORS.panel_bg_clear, 1);
+        else draw_clear(COLORS.bg);
         
-        var _padd   = MAC? 2 : ui(THEME_VALUE.panel_menu_padding);
+        var hori  = w > h;
+        var font  = f_p3;
+        var m     = [mx, my];
+        var _padd = MAC? 2 : ui(THEME_VALUE.panel_menu_padding);
         
         var profile = PREFERENCES.panel_menu_show_profile && os_is_network_connected() && OS != os_macosx;
         
@@ -565,17 +583,35 @@ function Panel_Menu() : PanelContent() constructor {
             var _curRow = 0, currY;
             var _rowH   = (h - _padd * 2) / row;
             var _ww     = 0;
-        
+        	
+        	var pd  = ui(8);
+        	var icw = ui(16);
+        	
             for(var i = 0; i < len; i++) {
                 var _menu  = _menus[i];
                 var _name  = _menu[0];
                 var _cont  = _menu[1];
                 var _colr  = array_safe_get_fast(_menu, 2, noone);
+                var _tagg  = array_safe_get_fast(_menu, 3, "");
+                
+                var _icon  = noone;
+                var _iconI = 0;
+                
                 var _mname = is_string(_cont)? _cont : $"menu_{_name}";
                 
+                switch(_tagg) {
+                	case "panel": 
+                		if(PREFERENCES.panel_lock) {
+                			_icon  = THEME.lock_16;
+							_iconI = 0;
+                		}
+                		break;
+                }
+                
                 draw_set_text(font, fa_center, fa_center, COLORS._main_text);
-                var ww = string_width(_name) + ui(16);
-                var hh = line_get_height() + ui(8);
+                var ww = string_width(_name) + pd * 2;
+                var hh = line_get_height()   + pd;
+                
                 if(hori) {
                     xc = xx + ww / 2;
                     x0 = xx;
@@ -596,17 +632,21 @@ function Panel_Menu() : PanelContent() constructor {
                     y1 = yy + hh;
                 }
                 
+                if(_icon != noone && hori) {
+                	ww += icw;
+                	xc += icw;
+                	x1 += icw;
+                }
+                
                 if(_colr != noone) {
                 	var cc = colorMultiply(COLORS.dialog_menubox_highlight, _colr);
-                	// draw_sprite_stretched_ext(THEME.box_r2_clr, 0, x0, y0, x1 - x0, y1 - y0, _colr);
                 	draw_sprite_stretched_ext(THEME.box_r5, 0, x0, y0, x1 - x0, y1 - y0, cc, .5);
                 }
                 
                 if((pHOVER || instance_exists(o_dialog_menubox)) && point_in_rectangle(mx, my, x0, y0, x1, y1)) {
                     _draggable = false;
-                    // draw_sprite_stretched(THEME.box_r2_clr, 0, x0, y0, x1 - x0, y1 - y0);
-                    var aa = .5;
-                    draw_sprite_stretched_ext(THEME.box_r5, 0, x0, y0, x1 - x0, y1 - y0, COLORS.dialog_menubox_highlight, aa);
+                    var aa = .2;
+                    draw_sprite_stretched_add(THEME.box_r5, 0, x0, y0, x1 - x0, y1 - y0, COLORS.dialog_menubox_highlight, aa);
                     
                     if((mouse_lpress(pFOCUS)) || (instance_exists(o_dialog_menubox) && o_dialog_menubox.menu_id != _mname)) {
                         var _mnx   = hori? x + x0 : x + x1;
@@ -616,10 +656,12 @@ function Panel_Menu() : PanelContent() constructor {
                         menuCall(_mname, _mcont, _mnx, _mny, fa_left, false);
                     }
                 }
-            
+            	
+            	if(_icon != noone) draw_sprite_ui_uniform(_icon, _iconI, x0 + ui(6) + icw / 2, yc, 1, COLORS._main_icon, .85);
+            	
                 draw_set_text(font, fa_center, fa_center, COLORS._main_text);
                 draw_text_add(xc, yc, _name);
-            
+            	
                 if(hori) {
                     xx  += ww + ui(4);
                     _mx  = max(_mx, xx);
@@ -669,6 +711,7 @@ function Panel_Menu() : PanelContent() constructor {
             } else {
                 var warning_amo = ds_list_size(WARNING);
                 var error_amo   = ds_list_size(ERRORS);
+                
                 draw_set_text(font, fa_left, fa_center);
                 
                 var wr_w = ui(20) + ui(8) + string_width(string(warning_amo));
@@ -725,9 +768,9 @@ function Panel_Menu() : PanelContent() constructor {
         #endregion
         
         #region addons 
-            var wh = nh;
-            
-            if(instance_exists(addon)) {
+            if(PREFERENCES.panel_menu_show_addon && instance_exists(addon)) {
+            	var wh = nh;
+            	
                 draw_set_text(font, fa_left, fa_center, COLORS._main_text);
                 var name = string(instance_number(addon)) + " ";
                 var tw   = string_width(name) + ui(34);
@@ -736,7 +779,7 @@ function Panel_Menu() : PanelContent() constructor {
                 
                 if(!hori) {
                     nx0 = ui(8);
-                    tx  = w / 2 - tw / 2;   
+                    tx  = w / 2 - tw / 2;
                     ww  = w - ui(16);
                 }
                 
@@ -756,7 +799,38 @@ function Panel_Menu() : PanelContent() constructor {
                 if(hori) nx0 += ww + ui(6);
                 else     ny0 += hh + ui(6);
             }
-            
+        #endregion
+        
+        #region command palette
+        	if(PREFERENCES.panel_menu_show_command) {
+	        	var wh = nh;
+	        	
+	            draw_set_text(font, fa_left, fa_center, COLORS._main_text);
+	            var tw   = ui(32);
+	            var tx   = nx0;
+	            var ww   = tw;
+	            
+	            if(!hori) {
+	                nx0 = ui(8);
+	                tx  = w / 2 - tw / 2;
+	                ww  = w - ui(16);
+	            }
+	            
+	            draw_sprite_stretched(THEME.panel_menu_widget, 0, nx0, ny0 - wh / 2, ww, wh);
+	            
+	            if(pHOVER && point_in_rectangle(mx, my, nx0, ny0 - wh / 2, nx0 + ww, ny0 + wh / 2)) {
+	                _draggable = false;
+	                setTOOLTIP(new tooltipHotkey(__txt("Command Palette"), "", "Command Palette"));
+	                draw_sprite_stretched_add(THEME.panel_menu_widget, 1, nx0, ny0 - wh / 2, ww, wh, c_white, .3);
+	                
+	                if(mouse_lpress(pFOCUS)) dialogCall(o_dialog_command_palette);
+	            }
+	            
+	            draw_sprite_ui_uniform(THEME.search, 0, tx + tw / 2, ny0, 1, COLORS._main_icon);
+	                
+	            if(hori) nx0 += ww + ui(6);
+	            else     ny0 += hh + ui(6);
+        	}
         #endregion
         
         #region actions
@@ -988,8 +1062,8 @@ function Panel_Menu() : PanelContent() constructor {
                     if(pHOVER && point_in_rectangle(mx, my, _x0, _y0, _x1, _y1)) {
                         _draggable = false;
                         // draw_sprite_stretched_ext(THEME.button_hide_fill, 1, _x0, _y0, _x1 - _x0, _y1 - _y0, sc, 1);
-                        var aa = .5;
-                        draw_sprite_stretched_ext(THEME.box_r5, 0, _x0, _y0, _x1 - _x0, _y1 - _y0, COLORS.dialog_menubox_highlight, aa);
+                        var aa = .2;
+                        draw_sprite_stretched_add(THEME.box_r5, 0, _x0, _y0, _x1 - _x0, _y1 - _y0, COLORS.dialog_menubox_highlight, aa);
                         
                         if(NEW_VERSION) setTOOLTIP(__txt("New Version Available"));
                         
@@ -1023,8 +1097,8 @@ function Panel_Menu() : PanelContent() constructor {
                 if(pHOVER && point_in_rectangle(mx, my, _xx1, y1 - ui(16), _xx1 + ww, y1 + ui(16))) {
                     _draggable = false;
                     // draw_sprite_stretched_ext(THEME.button_hide_fill, 1, _xx1, y1 - ui(12), ww, ui(24), sc, 1);
-                    var aa = .5;
-                    draw_sprite_stretched_ext(THEME.box_r5, 0, _xx1, y1 - ui(12), ww, ui(24), COLORS.dialog_menubox_highlight, aa);
+                    var aa = .2;
+                    draw_sprite_stretched_add(THEME.box_r5, 0, _xx1, y1 - ui(12), ww, ui(24), COLORS.dialog_menubox_highlight, aa);
                     
                     if(NEW_VERSION) setTOOLTIP(__txt("New Version Available"));
                     
@@ -1104,7 +1178,7 @@ function Panel_Menu() : PanelContent() constructor {
             	_b = 1;
             	_draggable = false;
             	
-            	draw_sprite_stretched_ext(THEME.box_r5, 0, tbx0, tby0, tw, th, COLORS.dialog_menubox_highlight, .5);
+            	draw_sprite_stretched_add(THEME.box_r5, 0, tbx0, tby0, tw, th, COLORS.dialog_menubox_highlight, .2);
             	if(mouse_lpress(pFOCUS)) {
 	                _hov = true;
 	                var amo = min(10, ds_list_size(RECENT_FILES));
@@ -1247,7 +1321,10 @@ function Panel_Menu() : PanelContent() constructor {
             }
         #endregion
         
-        #region drag
+        #region mouse event
+        	if(pHOVER && mouse_rclick(pFOCUS)) 
+        		menuCall("", context_visible);
+        
             if(_draggable) {
             	switch(OS) {
             		case os_windows :

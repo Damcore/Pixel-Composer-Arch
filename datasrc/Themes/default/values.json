@@ -52,8 +52,8 @@
         "lua_highlight_string": "blue",
         "lua_highlight_comment": "main_ltgrey",
         
-        "collection_folder_empty": "main_grey",
-        "collection_folder_nonempty": "main_ltgrey",
+        "collection_folder_empty": "main_mdwhite",
+        "collection_folder_nonempty": "main_white",
         "collection_tree_line": "main_dkgrey",
         "collection_path_current_bg": "main_grey",
         
@@ -107,6 +107,7 @@
         "node_blend_dynaSurf": "red",
         "node_blend_mktree": "pgreen",
         "node_blend_mkblast": "red",
+        "node_blend_grain": "yellow",
         "node_path_overlay_control_line": "main_grey",
         "node_wiggler_frame": "main_grey",
         "node_border_file_drop": "cyan",
@@ -161,7 +162,7 @@
         "panel_tab_inactive": "white",
         "panel_tab_text": "main_dkblack",
         "panel_tab_icon": "main_dkblack",
-        "panel_separator": "main_dkblack",
+        "panel_separator": "main_dark",
 
         "panel_graph_bg": "main_dkblack",
         "panel_graph_minimap_outline": "main_dkgrey",

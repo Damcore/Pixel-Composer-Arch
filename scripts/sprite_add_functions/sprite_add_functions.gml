@@ -90,7 +90,7 @@ function sprite_path_check_format(_path, noti = true) {
 			break;
 	}
 	
-	var _extx = string_lower(filename_ext(_path));
+	var _extx = image_get_type(_path);
 	var _fmod = file_get_modify_s(_path);
 	var _hash = md5_string_unicode($"{_path}{_fmod}");
 	var _prox = $"{TEMPDIR}{_hash}.png";

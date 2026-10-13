@@ -76,16 +76,16 @@ function Node_Collection(_x, _y, _group = noone) : Node(_x, _y, _group) construc
 	////- INSPECTOR
 	
 	insp1button = button(function() /*=>*/ {
-		array_foreach(NodeListSort(nodes, project), function(n) /*=>*/ { if(n.insp1button) n.insp1button.onClick(); }); 
+		array_foreach(NodeListSort(nodes, project), function(n,_) /*=>*/ { if(n.insp1button) n.insp1button.onClick(); return false; }); 
 	}).setTooltip(__txt("Execute"))
 		.setIcon(THEME.sequence_control, 1, COLORS._main_value_positive).iconPad(ui(6)).setBaseSprite(THEME.button_hide_fill);
 	
-	// insp2button = button(() => {
-	// 	var app = APPEND(collPath, group);
-	// 	nodeReplace(self, app, true);
-		
-	// }).setTooltip(__txt("Sync"))
-	// 	.setIcon(THEME.refresh_icon, 0, COLORS._main_value_positive).iconPad(ui(6)).setBaseSprite(THEME.button_hide_fill);
+	if(RUN_IDE) {
+		insp2button = button(function() /*=>*/ {
+			dialogPanelCall(new Panel_Group_IO_Edit(self, CONNECT_TYPE.input));
+		}).setTooltip(__txt("Edit IO"))
+			.setIcon(THEME.animation_setting, 0, COLORS._main_icon).iconPad(ui(6)).setBaseSprite(THEME.button_hide_fill);
+	}
 	
 	buttonCacheClear.onClick = function() /*=>*/ { array_foreach(nodes, function(n,i) /*=>*/ {return n.clearCache()} ); };
 	
@@ -365,7 +365,7 @@ function Node_Collection(_x, _y, _group = noone) : Node(_x, _y, _group) construc
 		if(!rendered)       return true;
 		
 		for( var i = custom_input_index, n = array_length(inputs); i < n; i++ ) 
-			if(inputs[i].isActiveDynamic(frame) || !inputs[i].from.rendered) return true;
+			if(inputs[i].isActiveDynamic(true)) return true;
 		
 		return false;
 	}
@@ -637,6 +637,26 @@ function Node_Collection(_x, _y, _group = noone) : Node(_x, _y, _group) construc
 	static disable = function() {
 		active = false;
 		array_foreach(getNodeList(), function(node) { node.disable(); });
+	}
+	
+	static onDestroy = function() {
+		for( var i = 0, n = array_length(nodes); i < n; i++ ) {
+			var node = nodes[i];
+		
+			for( var j = 0, m = array_length(node.inputs);  j < m; j++ ) node.inputs[j].destroy();
+			for( var j = 0, m = array_length(node.outputs); j < m; j++ ) node.outputs[j].destroy();
+			
+		}
+	}
+	
+	static onRestore = function() {
+		for( var i = 0, n = array_length(nodes); i < n; i++ ) {
+			var node = nodes[i];
+				
+			for( var j = 0, m = array_length(node.inputs);  j < m; j++ )  node.inputs[j].restore();
+			for( var j = 0, m = array_length(node.outputs); j < m; j++ ) node.outputs[j].restore();
+		
+		}
 	}
 	
 	static ononDoubleClick = noone;

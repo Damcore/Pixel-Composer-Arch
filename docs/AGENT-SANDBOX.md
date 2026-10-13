@@ -162,12 +162,13 @@ application. [`tools/linux/install.sh`](../tools/linux/install.sh) is the
 deployment side of that: application directory, launcher, desktop entry and
 icon, with an `--uninstall` counterpart.
 
-Two properties of the launcher are not cosmetic. `PXC_UI_FREEZE=1` has to be in
-the launch environment because it is read at startup and never stored in
-preferences, and the desktop entry sets `StartupNotify=false` because the
-GameMaker runner sets no `WM_CLASS` and no startup notification id - verified
-with `xprop` on a real Plasma session, where a startup notification would
-otherwise hang until it times out.
+The launcher sets `PXC_UI_FREEZE=1` because the workaround is read at startup
+and never stored in preferences. It also supplies SDL's X11/Wayland window
+class as `pixel-composer`, and the desktop entry uses the matching
+`StartupWMClass` so Plasma can associate the runner window with the app icon.
+The runner does not provide its own startup notification id, so keep
+`StartupNotify=false`; a real Plasma session otherwise waited for the startup
+notification to time out.
 
 ### 10b. Command-line project loading needs UI-independent initialization
 

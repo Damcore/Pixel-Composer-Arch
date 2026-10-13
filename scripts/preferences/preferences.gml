@@ -97,6 +97,7 @@
 			
 			PREFERENCES.dialog_add_node_view        = 1;
 			PREFERENCES.dialog_add_node_grouping    = 2;
+			PREFERENCES.dialog_add_node_icon        = true;
 			
 			PREFERENCES.dialog_add_node_width       = 600;
 			PREFERENCES.dialog_add_node_height      = 400;
@@ -118,6 +119,8 @@
 		#endregion
 		
 		#region PANEL
+			PREFERENCES.panel_lock = false;
+			
 			PREFERENCES.panel_reset_view_on_display_refresh = true;
 			PREFERENCES.panel_layout_file                 = "__default";
 			
@@ -131,7 +134,11 @@
 			PREFERENCES.panel_preview_show_tiles          = false;
 			PREFERENCES.panel_preview_toolbar_horizontal  = false;
 		
+			PREFERENCES.panel_menu_draw_bg                = !MAC;
 			PREFERENCES.panel_menu_show_profile           = true;
+			PREFERENCES.panel_menu_show_addon             = true;
+			PREFERENCES.panel_menu_show_command           = true;
+			
 			PREFERENCES.panel_menu_resource_monitor       = false;
 			PREFERENCES.panel_menu_right_control          = os_type != os_macosx;
 			
@@ -246,6 +253,8 @@
 			PREFERENCES.file_explorer             = "";
 			PREFERENCES.dialog_path               = "";
 			PREFERENCES.process_maker_export_path = "";
+			
+			PREFERENCES.test_dir            = "D:/Project/MakhamDev/LTS-PixelComposer/TEST/Others";
 			
 			PREFERENCES.path_assets         = [];
 			PREFERENCES.path_fonts          = [];

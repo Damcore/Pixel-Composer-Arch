@@ -1,11 +1,76 @@
 [
   {
+    "version": "1.22.0.102",
+    "changes": [
+      {
+        "date": "2026-10-03T09:44:20.974Z",
+        "node": "any",
+        "commit": "Introduced"
+      }
+    ]
+  },
+  {
+    "version": "1.22.0.02",
+    "changes": [
+      {
+        "date": "2026-10-01T00:02:13.418Z",
+        "node": "",
+        "commit": "Fix crash when opening recent files with no files."
+      }
+    ]
+  },
+  {
+    "version": "1.22.0.001",
+    "changes": [
+      {
+        "date": "2026-09-30T00:55:40.304Z",
+        "node": "",
+        "commit": "**Add Node Dialog**: Add option to disable category icon."
+      }
+    ]
+  },
+  {
+    "version": "1.22.0",
+    "changes": [
+      {
+        "date": "2026-09-25T08:34:00.675Z",
+        "node": "Inspector Panel",
+        "commit": "**Inspector Panel**: Fix output vector not show its value."
+      },
+      {
+        "date": "2026-09-26T01:43:51.890Z",
+        "node": "Mac",
+        "commit": "**Mac**: Fix arrow key write invisible character to textbox."
+      }
+    ]
+  },
+  {
+    "version": "1.21.10.205",
+    "changes": [
+      {
+        "date": "2026-09-25T00:06:25.094Z",
+        "node": "",
+        "commit": "Fix deleting group not remove error notification inside."
+      }
+    ]
+  },
+  {
     "version": "1.21.10.203",
     "changes": [
       {
         "date": "2026-09-23T03:47:07.540Z",
         "node": "",
         "commit": "**Color Button**: Fix crash when toggling button inside dialog box."
+      },
+      {
+        "date": "2026-09-23T04:55:09.046Z",
+        "node": "Preview Panel",
+        "commit": "**Preview Panel**: Improve area editor when area size become small."
+      },
+      {
+        "date": "2026-09-23T07:19:26.287Z",
+        "node": "",
+        "commit": "**Curve**: Add Dynamic range control."
       }
     ]
   },

@@ -76,7 +76,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		static setDefValue = function(_value, _serialize = true) {
 			if(connect_type == CONNECT_TYPE.input) {
 				def_val    = variable_clone(_value);
-				def_length = is_array(def_val)? array_length(def_val) : 0;
+				def_length = array_safe_length(def_val);
 				def_depth  = array_get_depth(def_val);
 			
 				sepable    = is_array(_value) && array_length(_value) > 1;
@@ -88,7 +88,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 				
 			} else if(connect_type == CONNECT_TYPE.output) {
 				def_val    = undefined;
-				def_length = 0;
+				def_length = array_safe_length(_value);
 				def_depth  = 0;
 			
 				sepable    = false;
@@ -1227,7 +1227,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 						break;
 						
 					case VALUE_DISPLAY.vector :		
-						var len = display_data[$ "length"] ?? array_length(def_val);
+						var len = display_data[$ "length"] ?? def_length;
 						
 						editWidget = new vectorBox(len, function(val, i) /*=>*/ {return setValueInspector(val, i)}, unit );
 						editWidget.axis       = display_data[$ "label"]    ?? editWidget.axis;
@@ -1716,7 +1716,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		return controlNode.rendered;
 	}
 	
-	static isActiveDynamic = function() {
+	static isActiveDynamic = function(useAnim = false) {
 		INLINE
 		if(value_from != noone) return false;
 		if(useInstance())       return getInstance().isActiveDynamic();
@@ -1732,7 +1732,7 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 			}
 		}
 		
-		return false; // is_anim
+		return useAnim && is_anim;
 	}
 	
 	force_dynamic = true;
@@ -2313,14 +2313,10 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		if(!editable || connect_type == CONNECT_TYPE.output) return;
 		
 		switch(type) {
-			case VALUE_TYPE.text :
-				setValue(str); 
-				break;
-				
-			case VALUE_TYPE.gradient :
-				var _grad = new gradientObject().deserialize(str);
-				setValueRaw(_grad);
-				break;
+			case VALUE_TYPE.text     : setValue(str); break;
+			case VALUE_TYPE.surface  : setValue(str); break;
+			
+			case VALUE_TYPE.gradient : var _grad = new gradientObject().deserialize(str); setValueRaw(_grad); break;
 				
 			default : 
 				try { 
@@ -3460,10 +3456,11 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 	}
 	
 	static destroy = function() {
-		if(error_notification != noone) {
-			noti_remove(error_notification);
-			error_notification = noone;
-		}	
+		if(error_notification != noone) ds_list_remove(ERRORS, error_notification);
+	}
+	
+	static restore   = function() {
+		if(error_notification != noone) ds_list_add(ERRORS, error_notification);
 	}
 	
 	static cleanUp = function() {
@@ -3474,6 +3471,8 @@ function NodeValue(_name, _node, _connect, _type, _value, _tooltip = "") constru
 		if(express_edit) express_edit.free();
 		
 		if(bypass_junc) { bypass_junc.cleanUp(); delete bypass_junc; }
+		
+		if(error_notification != noone) ds_list_remove(ERRORS, error_notification);
 	}
 		
 	static toString  = function() /*=>*/ {return (connect_type == CONNECT_TYPE.input? "Input" : "Output") + $" junction {index} of [{name}]: {node}"};

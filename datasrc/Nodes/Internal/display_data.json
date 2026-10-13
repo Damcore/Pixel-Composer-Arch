@@ -392,6 +392,32 @@
         "color": "node_blend_verlet"
     }, //VerletSim
     {
+        "name": "GrainSim", "nodes": [
+            { "label": "Domain" },
+            { "label": "/Domain" },
+            "Node_GrainSim_Domain",
+            "Node_GrainSim_Update",
+            { "label": "/Render" },
+            "Node_GrainSim_Render",
+            
+            { "label": "Grain" },
+            { "label": "/Spawner" },
+            "Node_GrainSim_Spawn",
+            "Node_GrainSim_Wake",
+            { "label": "/Destroy" },
+            "Node_GrainSim_Destroy",
+            { "label": "/Affector" },
+            "Node_GrainSim_Force",
+            "Node_GrainSim_Force_Field",
+            "Node_GrainSim_Explode",
+            { "label": "/Solid" },
+            "Node_GrainSim_Solid",
+            
+        ],
+        "context": ["Node_GrainSim_Inline"],
+        "color": "node_blend_grain"
+    }, // GrainSim
+    {
         "name": "MK Tree", "nodes": [
             { "label": "Builder" },
             { "label": "/Branch" },
@@ -759,6 +785,7 @@
             { "label": "/Conversion" },
             "Node_BW",
             "Node_Greyscale",
+            "Node_Channel_Swizzle",
             "Node_RGB_Channel",
             "Node_HSV_Channel",
             "Node_Alpha_Grey",
@@ -912,6 +939,7 @@
             "Node_Canvas",
             "Node_Tile_Drawer",
             "Node_Text",
+            "Node_Text_FreeType",
             "Node_Simple_Pattern",
             { "label": "/Shape" },
             "Node_Line",
@@ -1015,6 +1043,7 @@
             "Node_Smoke_Group_Inline",
             "Node_Strand_Group_Inline",
             "Node_VerletSim_Inline",
+            "Node_GrainSim_Inline",
             { "label": "/Diffusion" },
             "Node_Diffuse",
             "Node_RD",
@@ -1083,6 +1112,7 @@
             "Node_UV_Blend", 
             "Node_Compose_Texture", 
             "Node_Weld", 
+            "Node_Project_Ground", 
             { "label": "/Align" },
             "Node_Stack",
             "Node_Image_Grid",
@@ -1098,8 +1128,10 @@
             { "label": "Armature" },
             { "label": "/Build" },
             "Node_Armature",
+            "Node_Armature_Human",
             "Node_Armature_Bone",
             "Node_Armature_IK",
+            { "label": "/Modify" },
             "Node_Armature_Subdivide",
             "Node_Armature_Mirror",
             { "label": "/Pose" },
@@ -1309,6 +1341,7 @@
             "Node_Path_L_System",
             "Node_Path_From_Mask",
             "Node_Path_Plot",
+            "Node_Path_Projectile",
             "Node_Path_3D",
             "Node_Path_Shape_3D",
             "Node_Path_3D_Camera",
@@ -1383,6 +1416,7 @@
             { "label": "Surface" },
             "Node_Surface_data",
             "Node_Surface_Is_Empty",
+            "Node_Surface_Get_BBOX",
             "Node_Track_Pixel",
             "Node_IsoSurf",
             "Node_Surface_From_Buffer",
@@ -1437,6 +1471,7 @@
     {
         "name": "Animation", "nodes": [
             { "label": "Animation" },
+            "Node_Anim_Speed",
             "Node_Rate_Remap",
             "Node_Delay",
             "Node_Delay_Value",

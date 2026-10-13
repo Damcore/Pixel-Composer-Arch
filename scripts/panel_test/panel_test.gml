@@ -73,6 +73,10 @@ function Panel_Test() : PanelContent() constructor {
 				draw_sprite_stretched_ext(THEME.box_r2_clr, 0, 0, yy, ww, wh, c_white, 1);
 				if(mouse_lpress(pFOCUS))
 					LOAD_AT(_f[0]);
+					
+				if(mouse_rpress(pFOCUS))
+					menuCall("", [ menuItem(__txt("Load in Save mode"), function(p) /*=>*/ {return LOAD_AT(p, new __loadParams(false, true))}).setParam(_f[0]) ]);
+				
 			}
 			
 			if(testing && i == test_index) {
@@ -177,9 +181,13 @@ function Panel_Test() : PanelContent() constructor {
 	function setTestDir(dir) {
 		test_dir   = dir;
 		test_files = [];
-		
 		scanDir(test_dir);
+		
+		PREFERENCES.test_dir = dir;
+		PREF_SAVE();
 	}
+	
+	setTestDir(PREFERENCES.test_dir);
 	
 	function scanDir(dir) {
 		if(!directory_exists(dir)) return;
@@ -421,8 +429,6 @@ function Panel_Test() : PanelContent() constructor {
 			draw_text_add(bx + bw / 2, by + bh / 2, "Start test");
 		}
 	}
-	
-	setTestDir("D:/Project/MakhamDev/LTS-PixelComposer/TEST/Others");
 	
 	////- Actions
 	

@@ -20,9 +20,9 @@ function Node_3D_Instancer(_x, _y, _group = noone) : Node_3D(_x, _y, _group) con
 	newInput(22, nodeValue_Bool(    "Look At Center", false   ));
 	
 	////- =Path
-	newInput(23, nodeValue_Path(    "Shift Path"            )).setExtractNode("Node_Path_3D");
-	newInput(27, nodeValue_Range(   "Path Range",   [0,1]   ));
-	newInput(24, nodeValue_Bool(    "Follow Path",  false   ));
+	newInput(23, nodeValue_Path(    "Shift Path"              )).setExtractNode("Node_Path_3D");
+	newInput(27, nodeValue_Range(   "Path Range",   [0,1]     ));
+	newInput(24, nodeValue_Bool(    "Follow Path",  false     ));
 	
 	////- =Transform Data
 	newInput( 2, nodeValue_Vec3(    "Positions", [[0,0,0]] )).setArrayDepth(1);
@@ -150,8 +150,9 @@ function Node_3D_Instancer(_x, _y, _group = noone) : Node_3D(_x, _y, _group) con
 			object.objectTransform.applyMatrix();
 			
 			var _flat_vb = d3d_flattern(_obj);
-			object.VB = _flat_vb.VB;
+			object.VB        = _flat_vb.VB;
 			object.materials = _flat_vb.materials;
+			object.color     = ca_white;
 		#endregion
 		
 		#region data 
@@ -193,7 +194,6 @@ function Node_3D_Instancer(_x, _y, _group = noone) : Node_3D(_x, _y, _group) con
 		#endregion
 		
 		#region constant buffer
-			
 			var _posl = array_length(_poss);
 			var _rotl = array_length(_rots);
 			var _scal = array_length(_scas);
@@ -322,7 +322,6 @@ function Node_3D_Instancer(_x, _y, _group = noone) : Node_3D(_x, _y, _group) con
 					buffer_write(_buffer, buffer_f32, _ny); // norm Y
 					buffer_write(_buffer, buffer_f32, _nz); // norm Z
 					buffer_write(_buffer, buffer_f32, 0);
-					
 					
 					span[0] = min(span[0], _px - _Sposx); span[1] = max(span[1], _px - _Sposx);
 					span[2] = min(span[2], _py - _Sposy); span[3] = max(span[3], _py - _Sposy);

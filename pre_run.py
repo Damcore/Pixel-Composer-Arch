@@ -21,6 +21,11 @@ def main():
             print("Error: VERSION_STRING not found in globals.gml")
             sys.exit(1)
 
+    version_parts = version_string.split(".")
+    while len(version_parts) < 4:
+        version_parts.append("0")
+
+    version_string = ".".join(version_parts)
     display_name = f"Pixel Composer {version_string}"
     version = version_string
 

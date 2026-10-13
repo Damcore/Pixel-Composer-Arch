@@ -163,7 +163,10 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 		content_index = tabIndex;
 		
 		var prec = array_safe_get_fast(content, content_index);
-		if(prec) prec.onFocusBegin();
+		if(prec) {
+			setFocus(prec);
+			prec.onFocusBegin();
+		}
 	}
 	
 	function replacePanel(panel) {
@@ -732,70 +735,56 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 			_min_h = childs[0].min_h + childs[1].min_h;
 		}
 		
-		var _resizable = (is(HOVER, PanelContent) && HOVER.panel.dialog == dialog) || (dialog && instance_exists(HOVER) && HOVER == dialog.id);
-		    _resizable = _resizable && contentResizable();
-		
 		for(var i = 0, n = array_length(childs); i < n; i++) {
 			var _panel = array_safe_get(childs, i, 0);
 			if(is(_panel, Panel)) _panel.draw();
 		}
 		
-		var p = ui(6 - 1);
-		for(var i = 0, n = array_length(childs); i < n; i++) {
-			var _panel = array_safe_get(childs, i, 0);
-			if(!is(_panel, Panel)) continue;
+		if(!PREFERENCES.panel_lock) {
+			var _resizable = (is(HOVER, PanelContent) && HOVER.panel.dialog == dialog) || (dialog && instance_exists(HOVER) && HOVER == dialog.id);
+			    _resizable = _resizable && contentResizable();
 			
-			var px = _panel.x;
-			var py = _panel.y;
-			var pw = _panel.w;
-			var ph = _panel.h;
-			
-			switch(_panel.anchor) {
-				case ANCHOR.left :
-					// draw_set_color(_resizable? c_lime : c_red); draw_rectangle(px + pw - p, py, px + pw + p, py + ph, true);
+			var p = ui(6 - 1);
+			for(var i = 0, n = array_length(childs); i < n; i++) {
+				var _panel = array_safe_get(childs, i, 0);
+				if(!is(_panel, Panel)) continue;
 				
-					if(!_resizable || !point_in_rectangle(mouse_mx, mouse_my, px + pw - p, py, px + pw + p, py + ph))
-						break;
-							
-					CURSOR = cr_size_we;
-					if(mouse_lpress()) {
-						dragging  = 1;
-						drag_sval = pw;
-						drag_sm   = mouse_mx;
-					}
-					break;
-				case ANCHOR.top :
-					// draw_set_color(_resizable? c_lime : c_red); draw_rectangle(px, py + ph - p, px + pw, py + ph + p, true);
+				var px = _panel.x;
+				var py = _panel.y;
+				var pw = _panel.w;
+				var ph = _panel.h;
 				
-					if(!_resizable || !point_in_rectangle(mouse_mx, mouse_my, px, py + ph - p, px + pw, py + ph + p))
+				switch(_panel.anchor) {
+					case ANCHOR.left :
+						if(!_resizable || !point_in_rectangle(mouse_mx, mouse_my, px + pw - p, py, px + pw + p, py + ph))
+							break;
+						
+						CURSOR = cr_size_we;
+						if(mouse_lpress()) {
+							dragging  = 1;
+							drag_sval = pw;
+							drag_sm   = mouse_mx;
+						}
 						break;
-							
-					CURSOR = cr_size_ns;
-					if(mouse_lpress()) {
-						dragging  = 2;
-						drag_sval = ph;
-						drag_sm   = mouse_my;
-					}
-					break;
+						
+					case ANCHOR.top :
+						if(!_resizable || !point_in_rectangle(mouse_mx, mouse_my, px, py + ph - p, px + pw, py + ph + p))
+							break;
+								
+						CURSOR = cr_size_ns;
+						if(mouse_lpress()) {
+							dragging  = 2;
+							drag_sval = ph;
+							drag_sm   = mouse_my;
+						}
+						break;
+				}
 			}
 		}
 		
 		if(self == PANEL_MAIN && PANEL_DRAGGING != noone && key_mod_press(KCONTROL))
 			checkHover();
 		
-		if(THEME_VALUE.panel_separation_type == "line") {
-			draw_set_color(COLORS.panel_frame);
-			
-			if(split == "h") {
-				var _x = childs[0].x + childs[0].w;
-				draw_line(_x, y, _x, y + h);
-				
-			} else {
-				var _y = childs[0].y + childs[0].h;
-				draw_line(x, _y, x + w, _y);
-				
-			}
-		}
 	}
 	
 	function drawTabH() {
@@ -867,10 +856,10 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 					draw_sprite_stretched_ext(THEME.ui_panel_tab, 1, _tbx, _tby, _tbw, _tbh, COLORS.panel_tab);
 					foc = focus || (instance_exists(o_dialog_menubox) && o_dialog_menubox.getContextPanel() == self);
 					
-					if(foc) {
-						var cc = PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border;
-						draw_sprite_stretched_ext(THEME.ui_panel_tab, 2, _tbx, _tby, _tbw, _tbh, cc);
-					}
+					// if(foc) {
+					// 	var cc = PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border;
+					// 	draw_sprite_stretched_ext(THEME.ui_panel_tab, 2, _tbx, _tby, _tbw, _tbh, cc);
+					// }
 					
 				} else {
 					var cc = COLORS.panel_tab_inactive;
@@ -888,7 +877,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 						
 				} else if(hover && _hov) {
 					if(mouse_lpress(focus)) {
-						setTab(i);
+						setTab(i, true);
 						
 						tab_holding    = cont;
 						tab_hold_state = 0;
@@ -899,7 +888,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 					
 					if(DRAGGING) setTOOLTIP(__txt("Right Click to switch tab"));
 					if(mouse_rpress(focus)) {
-						if(DRAGGING) setTab(i);
+						if(DRAGGING) setTab(i, true);
 						else {
 							var menu = array_clone(border_rb_menu);
 							if(instanceof(cont) == "Panel_Menu")
@@ -914,16 +903,15 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 						rem = i;
 				}
 				
-				var cc =  foc? COLORS.panel_tab_icon : COLORS._main_text_sub;
 				var tc = _top? tab_size / 2 - ui(1) : tab_size / 2 + ui(2);
-				draw_sprite_ui(THEME.tab_exit, 0, _tbx + _tbw - ui(12), _tbc, 1, 1, 0, cc, aa);
+				draw_sprite_ui(THEME.tab_exit, 0, _tbx + _tbw - ui(12), _tbc, 1, 1, 0, COLORS._main_icon_light, aa);
 				
 				if(icn != noone) {
-					draw_sprite_ui(icn, 0, _tbx + ui(8 + 8), _tbc, 1, 1, 0, cc); 
+					draw_sprite_ui(icn, 0, _tbx + ui(8 + 8), _tbc, 1, 1, 0, COLORS._main_text_sub); 
 					_tbx += ui(20);
 				}
 				
-				draw_set_text(f_p3, fa_left, fa_center, foc? COLORS.panel_tab_text : COLORS._main_text_sub);
+				draw_set_text(f_p3, fa_left, fa_center, COLORS._main_text_sub);
 				draw_text_add(_tbx + ui(8), tc, txt);
 				
 				tbx += _tbw + ppad;
@@ -949,15 +937,14 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 				var _tbc = _tby + _tbh / 2;
 				var  tc  = _top? tab_size / 2 - ui(1) : tab_size / 2 + ui(2);
 				
-				draw_sprite_stretched_ext(THEME.ui_panel_tab, 2, _tbx, _tby, _tbw, _tbh, PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border, 1);
-				draw_sprite_ui(THEME.tab_exit, 0, _tbx + _tbw - ui(12), _tbc, 1, 1, 0, COLORS.panel_tab_icon);
+				draw_sprite_stretched_ext(THEME.ui_panel_tab, 1, _tbx, _tby, _tbw, _tbh, COLORS.panel_tab, 1);
 				
 				if(icn != noone) {
-					draw_sprite_ui(icn, 0, _tbx + ui(8 + 8), _tbc, 1, 1, 0, COLORS.panel_tab_icon);
+					draw_sprite_ui(icn, 0, _tbx + ui(8 + 8), _tbc, 1, 1, 0, COLORS._main_text);
 					_tbx += ui(20);
 				}
 				
-				draw_set_text(f_p3, fa_left, fa_center, COLORS.panel_tab_text);
+				draw_set_text(f_p3, fa_left, fa_center, COLORS._main_text);
 				draw_text_add(_tbx + ui(8), tc, txt);
 				
 				if(tab_hold_state == 0) {
@@ -1060,10 +1047,10 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 					draw_sprite_stretched_ext(THEME.ui_panel_tab_v, 1, _tbx, _tby, _tbw, _tbh, COLORS.panel_tab);
 					foc = focus || (instance_exists(o_dialog_menubox) && o_dialog_menubox.getContextPanel() == self);
 					
-					if(foc) {
-						cc = PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border;
-						draw_sprite_stretched_ext(THEME.ui_panel_tab_v, 2, _tbx, _tby, _tbw, _tbh, cc);
-					}
+					// if(foc) {
+					// 	cc = PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border;
+					// 	draw_sprite_stretched_ext(THEME.ui_panel_tab_v, 2, _tbx, _tby, _tbw, _tbh, cc);
+					// }
 					
 				} else {
 					var cc = COLORS.panel_tab_inactive;
@@ -1080,7 +1067,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 						
 				} else if(_hov) {
 					if(mouse_lpress(focus)) {
-						setTab(i);
+						setTab(i, true);
 						
 						tab_holding    = cont;
 						tab_hold_state = 0;
@@ -1091,7 +1078,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 					
 					if(DRAGGING) setTOOLTIP(__txt("Right Click to switch tab"));
 					if(mouse_rpress(focus)) {
-						if(DRAGGING) setTab(i);
+						if(DRAGGING) setTab(i, true);
 						else {
 							var menu = array_clone(border_rb_menu);
 							if(instanceof(cont) == "Panel_Menu")
@@ -1106,16 +1093,15 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 						rem = i;
 				}
 				
-				var cc =  foc?  COLORS.panel_tab_icon : COLORS._main_text_sub;
 				var tc = _left? tab_size / 2 : tab_size / 2 + ui(2);
-				draw_sprite_ui(THEME.tab_exit, 0, _tbc, _tby + _tbh - ui(12), 1, 1, 0, cc, aa);
+				draw_sprite_ui(THEME.tab_exit, 0, _tbc, _tby + _tbh - ui(12), 1, 1, 0, COLORS._main_icon_light, aa);
 				
 				if(icn != noone) {
-					draw_sprite_ui(icn, 0, _tbc, _tby + ui(8 + 8), 1, 1, 0, cc);
+					draw_sprite_ui(icn, 0, _tbc, _tby + ui(8 + 8), 1, 1, 0, COLORS._main_text_sub);
 					_tby += ui(20);
 				}
 				
-				draw_set_text(f_p3, _left? fa_right : fa_left, fa_center, foc? COLORS.panel_tab_text : COLORS._main_text_sub);
+				draw_set_text(f_p3, _left? fa_right : fa_left, fa_center, COLORS._main_text_sub);
 				draw_text_transform_add(tc, _tby + ui(8), txt, 1, _left? 90 : -90);
 				
 				tbx += _tbh + ppad;
@@ -1143,15 +1129,14 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 				var cc = PREFERENCES.panel_outline_accent? COLORS._main_accent : COLORS.panel_select_border;
 				var tc = _left? tab_size / 2 : tab_size / 2 + ui(2);
 				
-				draw_sprite_stretched_ext(THEME.ui_panel_tab_v, 2, _tbx, _tby, _tbw, _tbh, cc, 1);
-				draw_sprite_ui(THEME.tab_exit, 0, _tbc, _tby + _tbh - ui(12), 1, 1, 0, COLORS.panel_tab_icon);
+				draw_sprite_stretched_ext(THEME.ui_panel_tab_v, 1, _tbx, _tby, _tbw, _tbh, COLORS.panel_tab, 1);
 				
 				if(icn != noone) {
-					draw_sprite_ui(icn, 0, _tbc, _tby + ui(8 + 8), 1, 1, 0, COLORS._main_text_sub);
+					draw_sprite_ui(icn, 0, _tbc, _tby + ui(8 + 8), 1, 1, 0, COLORS._main_text);
 					_tby += ui(20);
 				}
 				
-				draw_set_text(f_p3, _left? fa_right : fa_left, fa_center, COLORS.panel_tab_text);
+				draw_set_text(f_p3, _left? fa_right : fa_left, fa_center, COLORS._main_text);
 				draw_text_transform_add(tc, _tby + ui(8), txt, 1, _left? 90 : -90);
 				
 				if(tab_hold_state == 0) {
@@ -1189,7 +1174,10 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 		if(w <= ui(16) || th < ui(16)) return;
 		
 		var con    = getContent();
-		var dFrame = !MAC || !is(con, Panel_Menu);
+		var dFrame = true;
+		
+		if(is(con, Panel_Menu) && !PREFERENCES.panel_menu_draw_bg)
+			dFrame = false;
 		
 		if(FULL_SCREEN_CONTENT != noone && con == FULL_SCREEN_CONTENT && self != FULL_SCREEN_PARENT) return;
 		
@@ -1201,7 +1189,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 		
 		if(dialog) con.window = dialog.window;
 		
-		var p = ui(6);
+		var p = PREFERENCES.panel_lock? 0 : ui(6);
 		var m_in = point_in_rectangle(_mx, _my, tx + p, ty + p, tx + tw - p, ty + th - p);
 		var m_ot = point_in_rectangle(_mx, _my, tx, ty, tx + tw, ty + th);
 		mouse_active = m_in;
@@ -1233,6 +1221,7 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 						draw_set_text(f_p1, fa_center, fa_center, COLORS._main_text_sub);
 						draw_text(tw / 2, th / 2, "Panel too small for content");
 					}
+					
 				} else {
 					draw_set_text(f_p1, fa_center, fa_center, COLORS._main_text_sub);
 					draw_text(tw / 2, th / 2, "No content");
@@ -1252,6 +1241,27 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 		
 	}
 	
+	function drawLine() {
+		if(array_empty(childs)) return;
+		
+		draw_set_color(COLORS.panel_frame);
+		
+		if(split == "h") {
+			var _x = childs[0].x < childs[1].x? childs[0].x + childs[0].w : childs[1].x + childs[1].w;
+			draw_line(_x, y, _x, y + h);
+			
+		} else {
+			var _y = childs[0].y < childs[1].y? childs[0].y + childs[0].h : childs[1].y + childs[1].h;
+			draw_line(x, _y, x + w, _y);
+			
+		}
+		
+		for(var i = 0, n = array_length(childs); i < n; i++) {
+			var _panel = array_safe_get(childs, i, 0);
+			if(_panel != 0) _panel.drawLine();
+		}
+	}
+	
 	function drawFrame(_dialog = false) {
 		if(array_empty(content)) {
 			for(var i = 0, n = array_length(childs); i < n; i++) {
@@ -1264,17 +1274,20 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 		var _mx = mouse_mxs;
 		var _my = mouse_mys;
 		
-		var con    = getContent();
-		var dFrame = !MAC || !is(con, Panel_Menu);
-		
-		var p = ui(6);
-		var m_in = point_in_rectangle(_mx, _my, tx + p, ty + p, tx + tw - p, ty + th - p);
-		var m_ot = point_in_rectangle(_mx, _my, tx, ty, tx + tw, ty + th);
-		
 		var _tx = tx + padding;
 		var _ty = ty + padding;
 		var _tw = tw - padding * 2;
 		var _th = th - padding * 2;
+		
+		var con    = getContent();
+		var dFrame = true;
+		
+		if(is(con, Panel_Menu) && !PREFERENCES.panel_menu_draw_bg)
+			dFrame = false;
+		
+		var p = ui(6);
+		var m_in = point_in_rectangle(_mx, _my, tx + p, ty + p, tx + tw - p, ty + th - p);
+		var m_ot = point_in_rectangle(_mx, _my, tx, ty, tx + tw, ty + th);
 		
 		if(THEME_VALUE.panel_separation_type == "frame" && !_dialog)
 			if(dFrame) draw_sprite_stretched_ext(THEME.ui_panel, 1, _tx, _ty, _tw, _th, COLORS.panel_frame);
@@ -1284,21 +1297,23 @@ function Panel(_parent, _x, _y, _w, _h) constructor {
 			if(dFrame) draw_sprite_stretched_ext(THEME.ui_panel, 1, _tx, _ty, _tw, _th, _color, 1);
 		}
 		
-		if(focusing && parent != noone && !m_in && m_ot && contentResizable()) {
-			if(dFrame) draw_sprite_stretched_ext(THEME.ui_panel, 1, _tx, _ty, _tw, _th, c_white, .4);
-			
-			if(DOUBLE_CLICK) {
-				extract();
-				PANEL_DRAG_MOUSE = 0;
+		if(!PREFERENCES.panel_lock) {
+			if(focusing && parent != noone && !m_in && m_ot && contentResizable()) {
+				if(dFrame) draw_sprite_stretched_ext(THEME.ui_panel, 1, _tx, _ty, _tw, _th, c_white, .4);
 				
-			} else if(mouse_rpress()) {
-				var menu = array_clone(border_rb_menu);
-				if(instanceof(getContent()) == "Panel_Menu")
-					array_remove(menu, border_rb_close);
+				if(DOUBLE_CLICK) {
+					extract();
+					PANEL_DRAG_MOUSE = 0;
 					
-				menuCall("panel_border_menu", menu);
-			}
-		} 
+				} else if(mouse_rpress()) {
+					var menu = array_clone(border_rb_menu);
+					if(instanceof(getContent()) == "Panel_Menu")
+						array_remove(menu, border_rb_close);
+						
+					menuCall("panel_border_menu", menu);
+				}
+			} 
+		}
 		
 		if(draw_droppable) {
 			if(dFrame) draw_sprite_stretched_ext(THEME.ui_panel, 1, _tx, _ty, _tw, _th, COLORS._main_value_positive, 1);	

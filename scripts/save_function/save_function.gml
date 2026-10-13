@@ -38,7 +38,7 @@ function SAVE_ALL() {
 
 function SAVE(project = PROJECT) {
 	if(DEMO) return false;
-	print("Saving", project)
+	// print("Saving", project)
 	
 	if(RUN_IDE) PREF_SAVE();
 	
@@ -107,7 +107,7 @@ function SAVE_AT(project = PROJECT, path = "", _param = new save_param()) {
 	
 	#region thumbnail
 		var _thumbSurf = PANEL_PREVIEW.getNodePreviewSurface();
-		if(!is_surface(_thumbSurf)) {
+		if(!is_surface(_thumbSurf) && PANEL_PREVIEW.getNodePreview() != noone) {
 			var _pan = PANEL_PREVIEW.panel;
 			if(is(_pan, Panel)) _thumbSurf = _pan.content_surface;
 		}

@@ -21,15 +21,17 @@
 	}
 	
 	function __node_bone_attributes() {
-		attributes.display_name = true;
-		attributes.display_bone = 0;
+		attributes.display_name    = true;
+		attributes.display_bone    = 0;
+		attributes.display_control = true;
 		
 		attributes.hovering = true;
 		attributes.focusing = true;
 		
 		array_push(attributeEditors,  "Display" );
-		array_push(attributeEditors, Node_Attribute("Display name", function() /*=>*/ {return attributes.display_name}, function() /*=>*/ {return new checkBox(function() /*=>*/ {return toggleAttribute("display_name")})}));
-		array_push(attributeEditors, Node_Attribute("Display bone", function() /*=>*/ {return attributes.display_bone}, function() /*=>*/ {return new scrollBox(__txts(["Octahedral", "Stick"]), function(i) /*=>*/ {return setAttribute("display_bone", i)})}));
+		array_push(attributeEditors, Node_Attribute("Display Name",    function() /*=>*/ {return attributes.display_name},    function() /*=>*/ {return new checkBox(function() /*=>*/ {return toggleAttribute("display_name")})}));
+		array_push(attributeEditors, Node_Attribute("Display Bone",    function() /*=>*/ {return attributes.display_bone},    function() /*=>*/ {return new scrollBox(__txts(["Octahedral", "Stick"]), function(i) /*=>*/ {return setAttribute("display_bone", i)})}));
+		array_push(attributeEditors, Node_Attribute("Display Control", function() /*=>*/ {return attributes.display_control}, function() /*=>*/ {return new checkBox(function() /*=>*/ {return toggleAttribute("display_control")})}));
 	}
 	
 	function armature_tool_move(_node) : ToolObject() constructor {
@@ -1148,7 +1150,6 @@ function Node_Armature(_x, _y, _group = noone) : Node(_x, _y, _group) constructo
 							if(_bone == anc.parent) {
 								_reach = true;
 								bne    = anc;
-								anc    = anc.parent;
 								break;
 							}
 						}
@@ -1165,9 +1166,9 @@ function Node_Armature(_x, _y, _group = noone) : Node(_x, _y, _group) constructo
 								var _len = point_distance(p0.x, p0.y, p1.x, p1.y);
 								var _ang = point_direction(p0.x, p0.y, p1.x, p1.y);
 								
-								recordAction(ACTION_TYPE.struct_modify, bones)
-									.setName("Adjust bone IK")
-									.setRef(self);
+								recordAction(ACTION_TYPE.struct_modify, bones).setName("Adjust bone IK").setRef(self);
+								
+								print(anc);
 								
 								var IKbone = new __Bone(anc, _len, _ang, ik_dragging.angle + 90, 0, self);
 								anc.addChild(IKbone);

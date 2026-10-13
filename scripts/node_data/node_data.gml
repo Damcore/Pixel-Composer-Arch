@@ -2209,7 +2209,7 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		if(_panel && _panel.node_hovering == self) ba = .1;
 		draw_sprite_stretched_ext(bg_spr, 3, xx, yy, w * _s, nh, nodeC, ba);
 		
-		var cc = renderActive? COLORS._main_text : COLORS._main_text_sub; cc = c_white;
+		var cc = renderActive? COLORS._main_text : COLORS._main_text_sub;
 		
 		if(PREFERENCES.node_show_render_status && !rendered)
 			cc = isRenderable()? COLORS._main_value_positive : COLORS._main_value_negative;
@@ -2223,9 +2223,8 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		
 		if(_panel && _panel.is_searching && _panel.search_string != "" && search_match == -9999)
 			aa *= .15;
-		
 		if(FILTER_ANIMATION && !isAnimated()) 
-			aa = .25;
+			aa  = .25;
 		
 		var ic = icon;
 		if(instanceBase) 
@@ -2257,9 +2256,15 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		draw_set_text(f_sdf, fa_left, fa_center, cc, aa);
 			BLEND_ALPHA_MULP
 			
-			draw_set_color(c_black); draw_text_transformed(_tx+1, ty+1, _name, _ts, _ts, 0);
-			draw_set_color(cc);      draw_text_transformed(_tx,   ty,   _name, _ts, _ts, 0);
-			if(active_index != -1 && !active_value) draw_line_width(_tx, ty, _tx + string_width(_name) * _ts, ty, ui(1));
+			if(THEME_VALUE.node_name_shadow) {
+				draw_set_color(c_black); 
+				draw_text_transformed(_tx+1, ty+1, _name, _ts, _ts, 0);
+			}
+			
+			draw_set_color(cc);
+			draw_text_transformed(_tx, ty, _name, _ts, _ts, 0);
+			
+			if(active_index != -1 && !active_value) draw_line_width(_tx, ty, _tx + string_width(_name) * _ts, ty, max(1, _s * 1));
 			
 			BLEND_NORMAL
 		draw_set_alpha(1);
@@ -2902,6 +2907,7 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 			BLEND_NORMAL
 		}
 		
+		if(THEME_VALUE.node_border) draw_sprite_stretched_ext(bg_spr, 1, xx, yy, w * _s, hh * _s, COLORS.node_border, 1);
 		if(bg_spr_add > 0) draw_sprite_stretched_add(bg_spr, 1, xx, yy, w * _s, hh * _s, getColor(), bg_spr_add);
 		
 		active_drawing = active_draw_index > -1;
@@ -3863,6 +3869,7 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		var val_from_map = {};
 		for( var i = 0, n = array_length(inputs); i < n; i++ ) {
 			var _i = inputs[i];
+			
 			if(_i.value_from != noone && !has(val_from_map, _i.type)) 
 				val_from_map[$ _i.type] = _i.value_from;
 		}
@@ -3895,8 +3902,8 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 			jun.value_to = [];
 		}
 		
-		for( var i = 0; i < array_length( inputs); i++ )  inputs[i].destroy();
-		for( var i = 0; i < array_length(outputs); i++ ) outputs[i].destroy();
+		for( var i = 0, n = array_length(inputs);  i < n; i++ ) inputs[i].destroy();
+		for( var i = 0, n = array_length(outputs); i < n; i++ ) outputs[i].destroy();
 		
 		if(onDestroy != undefined) onDestroy();
 		if(group)  group.refreshNodes();
@@ -3912,6 +3919,9 @@ function Node(_x, _y, _group = noone) : __Node_Base(_x, _y) constructor {
 		
 		GraphRefresh();
 		array_push(group == noone? project.nodes : group.getNodeList(), self);
+		
+		for( var i = 0, n = array_length(inputs);  i < n; i++ ) inputs[i].restore();
+		for( var i = 0, n = array_length(outputs); i < n; i++ ) outputs[i].restore();
 		
 		if(onRestore != undefined) onRestore();
 		if(group) group.refreshNodes();

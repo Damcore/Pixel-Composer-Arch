@@ -107,10 +107,12 @@ function Node_PB_Draw(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) c
 		var bx = _x;
 		var by = _y;
 		
+		var bb = THEME.button_hide_fill;
+		
 		for( var i = 0, n = array_length(typeList); i < n; i++ ) {
 			var _txt = $"New {typeList[i]}";
 			
-			if(buttonInstant(THEME.button_hide_fill, bx, by, bs, bs, _m, _hover, _focus, _txt, s_node_pb_effect_types, i, COLORS._main_icon, 1, .75) == 2) {
+			if(buttonInstant_Pad(bb, bx, by, bs, bs, _m, _hover, _focus, _txt, s_node_pb_effect_types, i, COLORS._main_icon_light, 1, ui(8)) == 2) {
 				var _inTyp = createNewInput(); 
 			    _inTyp.setValue(i);
 				triggerRender();
@@ -219,7 +221,7 @@ function Node_PB_Draw(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) c
 	
 	temp_surface = [ noone, noone ];
 	
-	static getDimension = function() { return group.dimension; }
+	static getDimension = function() { return is(group, Node_Pixel_Builder)? group.dimension : [1,1]; }
 	
 	static drawOverlay = function(hover, active, _x, _y, _s, _mx, _my, _params) { 
 		var _pbase = getInputSingle(0);
@@ -293,7 +295,9 @@ function Node_PB_Draw(_x, _y, _group = noone) : Node_Processor(_x, _y, _group) c
 	}
 	
 	static processData = function(_outData, _data, _array_index) { 
+		if(!is(group, Node_Pixel_Builder)) return _outData;
 		if(getInputAmount() == 0) return _outData;
+		
 		dynamic_visibility();
 		
 		var _dim     = group.dimension;

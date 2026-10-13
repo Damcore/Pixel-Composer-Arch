@@ -408,7 +408,7 @@ function NodeObject(_name, _node, _tooltip = "") constructor {
 		_createFn = asset_get_index(_createFn);
 		if(_createFn != -1) setBuild(_createFn);
 		
-		if(has(_data, "deprecated"))
+		if(_data[$ "deprecated"] == true)
 			isDeprecated();
 		
 		if(has(_data, "alias"))
@@ -563,13 +563,14 @@ function __read_node_display(_list, _dir) {
 			var _n = _nodes[j];
 			
 			if(is_string(_n)) {
-				if(struct_has(ALL_NODES, _n)) {
+				if(has(ALL_NODES, _n)) {
 					var _node = ALL_NODES[$ _n];
 					
 					if(_node.new_node) {
-						if(_currLab != _head) 
-							array_push(NEW_NODES, _head);
-						_currLab = _head;
+						var _h = _filter == undefined? _head : _name;
+						if(_currLab != _h)
+							array_push(NEW_NODES, _h);
+						_currLab = _h;
 						array_push(NEW_NODES, _node);
 					}
 					

@@ -539,7 +539,9 @@ function Panel_Inspector() : PanelContent() constructor {
             		var _glInp = PROJECT.globalNode.inputs[i];
             		if(!typeCompatible(_glInp.type, __dialog_junction.type)) continue;
             		
-            		array_push(arr, menuItem(_glInp.name, function(d) /*=>*/ {return __dialog_junction.setExpression(d.name)})).setParam({ name : _glInp.name });
+            		array_push(arr, 
+            			menuItem(_glInp.name, function(d) /*=>*/ {return __dialog_junction.setExpression(d)}).setParam(_glInp.name)
+        			);
             	}
             	
             	array_push(arr, -1, menuItem(__txt("New Globalvar") + "...", function() /*=>*/ {
@@ -1084,6 +1086,16 @@ function Panel_Inspector() : PanelContent() constructor {
                 hh += _hh;
                 continue;
                 
+            } else if(jun == -2) {                           // SPACER
+            	var _hh = ui(6);
+                var _yy = yy + _hh / 2 - ui(3);
+                
+                draw_set_color(COLORS.panel_inspector_key_separator);
+                draw_line(ui(8), _yy, con_w - ui(8), _yy);
+                
+                hh += _hh;
+                continue;
+                
             } else if(is(jun, Inspector_Label)) {            // TEXT
             	if((filtering && filter_text != "") || FILTER_ANIMATION) continue;
                 if(!jun.visible) continue;
@@ -1376,7 +1388,7 @@ function Panel_Inspector() : PanelContent() constructor {
 	                        if(is(j_jun, Inspector_Spacer) && !j_jun.coll) break;
 	                        
 	                        if(is_real(j_jun)) {
-	                        	if(j_jun < 0) {
+	                        	if(j_jun == -1) {
 	                        		if(_section_st-- <= 0)
 	                        			break;
                         			
@@ -2842,8 +2854,7 @@ function Panel_Inspector() : PanelContent() constructor {
     static editValueAsString = function(_junc) {
     	if(!is(prop_selecting, NodeValue)) return;
     	
-    	var _val = prop_selecting.showValue();
-    	textboxCall(_val, function(t) /*=>*/ { prop_selecting.setString(t); })
+    	textareaCall(prop_selecting.showValue(), function(t) /*=>*/ {return prop_selecting.setString(t)});
     }
 }
 

@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.22.0.205",
+    "changes": [
+      {
+        "date": "2026-10-09T00:46:14.294Z",
+        "node": "",
+        "commit": "**HTTP] Add PUT, PATCH, DELETE, and custom request method. - [HTTP**: Add request header input."
+      },
+      {
+        "date": "2026-10-09T01:29:44.618Z",
+        "node": "",
+        "commit": "Software now read an image file based on file signature instead of extension for that EVIL .webp that rename to be .png."
+      }
+    ]
+  },
+  {
     "version": "1.21.4.008",
     "changes": [
       {

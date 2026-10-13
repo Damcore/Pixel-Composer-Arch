@@ -96,6 +96,7 @@ if __name__ == "__main__":
     packFolder("Assets", "assets")
     packFolder("Collections", "collections")
     packFolder("Curves", "curves")
+    packFolder("Collections", "collections")
     packFolder("Layouts", "layouts")
     packFolder("Locale", "locale")
     packFolder("Nodes", "nodes")

@@ -74,12 +74,15 @@ function ThemeColor() constructor {
     dialog_lua_ref_bg_args              = CDEF.main_ltgrey;
     dialog_lua_ref_bg_hover             = merge_color(CDEF.main_white, CDEF.main_ltgrey, 0.5);
     dialog_lua_ref_bg                   = CDEF.main_white;
+    dialog_separator                    = CDEF.main_dkblack;
     
     add_node_blend_action               = CDEF.lime;
     add_node_blend_generic              = CDEF.yellow;
 
     node_base_bg                        = CDEF.main_dkgrey;
     node_name_bg                        = CDEF.main_dark;
+    node_border                         = CDEF.main_dark;
+    
     node_composite_bg                   = CDEF.main_dkgrey;
     node_composite_bg_blend             = CDEF.main_white;
     node_composite_separator            = CDEF.main_black;
@@ -107,6 +110,7 @@ function ThemeColor() constructor {
     node_blend_dynaSurf                 = CDEF.red;
     node_blend_mktree                   = CDEF.pgreen;
     node_blend_mkblast                  = CDEF.red;
+    node_blend_grain                    = CDEF.yellow;
     node_path_overlay_control_line      = CDEF.main_grey;
     node_wiggler_frame                  = CDEF.main_grey;
     node_border_file_drop               = CDEF.cyan;
@@ -162,7 +166,7 @@ function ThemeColor() constructor {
     panel_tab_text                      = CDEF.main_dkblack;
     panel_tab_icon                      = CDEF.main_dkblack;
     panel_separator                     = CDEF.main_dkblack;
-
+    
     panel_graph_bg                      = CDEF.main_dkblack;
     panel_graph_minimap_outline         = CDEF.main_dkgrey;
     panel_graph_node_dimension          = CDEF.main_grey;
@@ -225,6 +229,9 @@ function ThemeValue() constructor {
 	dialog_addnode_offset         = 8;
 
     inline_node_radius            = 6;
+    
+    node_border                   = false;
+    node_name_shadow              = true;
     
     panel_separation_type         = "frame";
     panel_padding                 = 2;
