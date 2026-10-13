@@ -26,9 +26,17 @@ def replace_shader(shader_path):
 
             if modi != lModi:
                 pre_sh = shader.split(reg)[0]
-                post_sh = shader.split(ereg)[1]
+                region_end = f'\n#endregion -- {lName} --'
+                region_end_pos = shader.find(region_end, len(pre_sh) + len(reg))
+                if region_end_pos < 0:
+                    raise ValueError(f"Closing region marker for {lName} not found in {shader_path}")
 
-                shader = pre_sh + reg + f' [{lModi}]\n' + lCon + ereg + post_sh
+                post_start = region_end_pos + len(region_end)
+                if shader[post_start:post_start + 1] == '\n':
+                    post_start += 1
+                post_sh = shader[post_start:]
+
+                shader = pre_sh + reg + f' [{lModi}]\n' + lCon + region_end + '\n' + post_sh
                 edit = True
     
     if edit:
