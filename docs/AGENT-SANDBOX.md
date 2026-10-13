@@ -163,12 +163,13 @@ deployment side of that: application directory, launcher, desktop entry and
 icon, with an `--uninstall` counterpart.
 
 The launcher sets `PXC_UI_FREEZE=1` because the workaround is read at startup
-and never stored in preferences. It also supplies SDL's X11/Wayland window
-class as `pixel-composer`, and the desktop entry uses the matching
-`StartupWMClass` so Plasma can associate the runner window with the app icon.
-The runner does not provide its own startup notification id, so keep
-`StartupNotify=false`; a real Plasma session otherwise waited for the startup
-notification to time out.
+and never stored in preferences. The GameMaker runner creates no `WM_CLASS` on
+X11/XWayland, so the launcher uses `xdotool` to assign `pixel-composer`; the
+desktop entry's matching `StartupWMClass` lets Plasma associate the window with
+the app icon. If `xdotool` or X11 is unavailable, the app still launches, but
+Plasma may use a generic icon. The runner also provides no startup notification
+id, so keep `StartupNotify=false`; a real Plasma session otherwise waited for
+the startup notification to time out.
 
 ### 10b. Command-line project loading needs UI-independent initialization
 

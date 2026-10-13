@@ -18,7 +18,8 @@ set -euo pipefail
 # The generated launcher carries the opt-in UI snapshot workaround
 # (PXC_UI_FREEZE=1, see ARCH-LINUX.md). It is read at startup and is not a
 # saved preference, so every launcher has to set it; PXC_UI_FREEZE=0 in the
-# environment turns it off again.
+# environment turns it off again. On X11/XWayland, xdotool assigns the missing
+# WM_CLASS so Plasma can match the desktop entry and show the app icon.
 #
 # Overrides: PXC_SANDBOX_CACHE, PXC_APP_DIR, PXC_BIN_DIR, PXC_DATA_DIR.
 
@@ -118,10 +119,28 @@ cd "\$APP"
 unset PXC_UI_STATE_RESET
 PXC_UI_FREEZE="\${PXC_UI_FREEZE:-1}"
 export PXC_UI_FREEZE
-SDL_VIDEO_X11_WMCLASS="\${SDL_VIDEO_X11_WMCLASS:-pixel-composer}"
-SDL_VIDEO_WAYLAND_WMCLASS="\${SDL_VIDEO_WAYLAND_WMCLASS:-pixel-composer}"
-export SDL_VIDEO_X11_WMCLASS SDL_VIDEO_WAYLAND_WMCLASS
-exec ./runner "\$@"
+if ! command -v xdotool >/dev/null 2>&1 || [ -z "\${DISPLAY:-}" ]; then
+    exec ./runner "\$@"
+fi
+
+./runner "\$@" &
+RUNNER_PID=\$!
+(
+    while kill -0 "\$RUNNER_PID" 2>/dev/null; do
+        WINDOWS=\$(xdotool search --onlyvisible --name '^Pixel Composer' 2>/dev/null || true)
+        for WINDOW in \$WINDOWS; do
+            xdotool set_window --classname pixel-composer --class pixel-composer "\$WINDOW" >/dev/null 2>&1 || true
+        done
+        sleep 0.25
+    done
+) &
+CLASS_MONITOR_PID=\$!
+set +e
+wait "\$RUNNER_PID"
+STATUS=\$?
+kill "\$CLASS_MONITOR_PID" 2>/dev/null
+wait "\$CLASS_MONITOR_PID" 2>/dev/null
+exit "\$STATUS"
 LAUNCHER
 chmod 0755 "$launcher"
 

@@ -8,7 +8,7 @@ Icon=pixel-composer
 Terminal=false
 Categories=Graphics;2DGraphics;RasterGraphics;
 Keywords=Pixel;Sprite;Tileset;Node;Procedural;
-# The launcher sets the SDL window class so KDE can associate the runner window
-# with this desktop entry and its icon.
+# The runner lacks a WM_CLASS; the launcher sets it so KDE can associate the
+# runner window with this desktop entry and its icon.
 StartupWMClass=pixel-composer
 StartupNotify=false
