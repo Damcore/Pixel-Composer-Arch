@@ -134,10 +134,11 @@ directory, a launcher that carries `PXC_UI_FREEZE=1` (see above - the variable
 is read at startup, so every launcher and desktop shortcut has to set it), a
 desktop entry and the application icon.
 
-On X11/XWayland, the launcher also uses `xdotool` to assign a window class to
-the GameMaker runner, which otherwise has no `WM_CLASS`; Plasma can then match
-the window to the desktop entry and show the Pixel Composer icon. Without
-`xdotool`, launching still works but the taskbar may show a generic icon.
+On X11/XWayland, the launcher uses `xdotool` to assign a window class to the
+GameMaker runner, which otherwise has no `WM_CLASS`, and sets its `_NET_WM_ICON`
+from the installed Pixel Composer icon. Plasma can then show the right icon in
+the taskbar and titlebar. Without `xdotool`, launching still works, but the
+window may show a generic icon.
 
 Afterwards it checks the installed runner with `ldd` and fails if a shared
 library is missing. That check exists because the build container has libraries

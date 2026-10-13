@@ -84,6 +84,7 @@ if [[ ! -s "$source_dir/assets/game.unx" || ! -f "$source_dir/runner" ]]; then
   echo "       Build first: ./tools/linux/build-in-container.sh" >&2
   exit 1
 fi
+icon_source="$(find "$ROOT/sprites/s_icon_256" -maxdepth 1 -name '*.png' -print -quit 2>/dev/null || true)"
 
 # Swap the directory into place instead of copying over a running installation.
 staging="$app_dir.new.$$"
@@ -91,6 +92,10 @@ rm -rf "$staging"
 mkdir -p "$(dirname "$app_dir")" "$bin_dir" "$data_dir/applications"
 cp -a "$source_dir" "$staging"
 chmod +x "$staging/runner"
+install -m 0644 "$ROOT/tools/linux/set-window-icon.py" "$staging/set-window-icon.py"
+if [[ -n "$icon_source" ]]; then
+  install -m 0644 "$icon_source" "$staging/pixel-composer.png"
+fi
 
 previous="$app_dir.old.$$"
 if [[ -d "$app_dir" ]]; then
@@ -130,6 +135,9 @@ RUNNER_PID=\$!
         WINDOWS=\$(xdotool search --onlyvisible --name '^Pixel Composer' 2>/dev/null || true)
         for WINDOW in \$WINDOWS; do
             if xdotool set_window --classname pixel-composer --class pixel-composer "\$WINDOW" >/dev/null 2>&1; then
+                if command -v python3 >/dev/null 2>&1 && [ -r "\$APP/set-window-icon.py" ] && [ -r "\$APP/pixel-composer.png" ]; then
+                    python3 "\$APP/set-window-icon.py" "\$WINDOW" "\$APP/pixel-composer.png" >/dev/null 2>&1 || true
+                fi
                 exit 0
             fi
         done
@@ -146,7 +154,6 @@ exit "\$STATUS"
 LAUNCHER
 chmod 0755 "$launcher"
 
-icon_source="$(find "$ROOT/sprites/s_icon_256" -maxdepth 1 -name '*.png' -print -quit 2>/dev/null || true)"
 if [[ -n "$icon_source" ]]; then
   install -D -m 0644 "$icon_source" "$icon_file"
 else

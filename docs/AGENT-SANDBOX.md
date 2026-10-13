@@ -166,10 +166,12 @@ The launcher sets `PXC_UI_FREEZE=1` because the workaround is read at startup
 and never stored in preferences. The GameMaker runner creates no `WM_CLASS` on
 X11/XWayland, so the launcher uses `xdotool` to assign `pixel-composer`; the
 desktop entry's matching `StartupWMClass` lets Plasma associate the window with
-the app icon. If `xdotool` or X11 is unavailable, the app still launches, but
-Plasma may use a generic icon. The runner also provides no startup notification
-id, so keep `StartupNotify=false`; a real Plasma session otherwise waited for
-the startup notification to time out.
+the app icon. The runner also has no `_NET_WM_ICON`, so the launcher uses
+[`set-window-icon.py`](../tools/linux/set-window-icon.py) to set the packaged
+icon for the titlebar and window switchers. If `xdotool` or X11 is unavailable,
+the app still launches, but Plasma may use a generic icon. The runner provides
+no startup notification id, so keep `StartupNotify=false`; a real Plasma
+session otherwise waited for the startup notification to time out.
 
 ### 10b. Command-line project loading needs UI-independent initialization
 
